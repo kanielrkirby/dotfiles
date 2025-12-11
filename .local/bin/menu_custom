@@ -1,0 +1,184 @@
+#!/bin/bash
+
+# Load environment
+SKIP_TMUX_START=1
+source ~/.bashrc
+
+# Configuration
+CONFIG_DIR="${MENU_CUSTOM_CONFIG_DIR:-$HOME/.config/bemenu_custom}"
+CONFIG_FILE="$CONFIG_DIR/config"
+COMMANDS_DIR="$CONFIG_DIR/commands"
+CACHE_DIR="${MENU_CUSTOM_CACHE_DIR:-$HOME/.cache/bemenu_custom}"
+
+# Default menu options
+MENU_OPTS="${MENU_CUSTOM_OPTS:--l 10}"
+
+# Ensure directories exist
+mkdir -p "$CONFIG_DIR" "$COMMANDS_DIR" "$CACHE_DIR"
+chmod 700 "$CACHE_DIR"
+
+# Load configuration
+if [ -f "$CONFIG_FILE" ]; then
+    source "$CONFIG_FILE"
+fi
+
+# Function to log debug info
+debug_log() {
+    [ "${MENU_CUSTOM_DEBUG:-0}" = "1" ] && echo "[DEBUG] $*" >&2
+}
+
+# Detect display server and set menu command
+if [ -n "$WAYLAND_DISPLAY" ]; then
+    MENU_CMD="bemenu"
+    debug_log "Using bemenu (Wayland)"
+elif [ -n "$DISPLAY" ]; then
+    MENU_CMD="dmenu"
+    debug_log "Using dmenu (X11)"
+else
+    echo "No display server detected" >&2
+    exit 1
+fi
+
+# Function to run menu with multi-action support
+# Usage: menu_with_actions "input" "options" "action_map"
+# action_map format: "10:action1,11:action2,0:default_action"
+menu_with_actions() {
+    local input="$1"
+    local menu_opts="$2"
+    local action_map="$3"
+    local prompt_suffix="$4"
+    
+    # Add action hints to prompt if suffix provided
+    if [ -n "$prompt_suffix" ]; then
+        menu_opts=$(echo "$menu_opts" | sed "s/-p '[^']*'/-p '&$prompt_suffix'/")
+    fi
+    
+    debug_log "Running $MENU_CMD with options: $menu_opts"
+    debug_log "Action map: $action_map"
+    
+    # Run menu and capture both output and exit code
+    local selection
+    local exit_code
+    selection=$(echo "$input" | exec $MENU_CMD $menu_opts)
+    exit_code=$?
+    
+    debug_log "Menu exit code: $exit_code"
+    debug_log "Selection: $selection"
+    
+    if [ -z "$selection" ]; then
+        debug_log "No selection made"
+        return 1
+    fi
+    
+    # Parse action map to find the action for this exit code
+    local action=""
+    IFS=',' read -ra ACTION_PAIRS <<< "$action_map"
+    for pair in "${ACTION_PAIRS[@]}"; do
+        local code="${pair%%:*}"
+        local act="${pair##*:}"
+        if [ "$exit_code" = "$code" ]; then
+            action="$act"
+            break
+        fi
+    done
+    
+    # If no specific action found, use default (exit code 0)
+    if [ -z "$action" ] && [ "$exit_code" = "0" ]; then
+        for pair in "${ACTION_PAIRS[@]}"; do
+            local code="${pair%%:*}"
+            local act="${pair##*:}"
+            if [ "$code" = "0" ]; then
+                action="$act"
+                break
+            fi
+        done
+    fi
+    
+    debug_log "Selected action: $action"
+    
+    # Return selection and action via global variables
+    MENU_SELECTION="$selection"
+    MENU_ACTION="$action"
+    
+    return 0
+}
+
+# Function to run a custom command handler
+run_custom_command() {
+    local cmd="$1"
+    local handler="$COMMANDS_DIR/$cmd"
+    
+    debug_log "Looking for handler: $handler"
+    
+    if [ -f "$handler" ] && [ -x "$handler" ]; then
+        debug_log "Running custom handler: $handler"
+        "$handler"
+        return $?
+    fi
+    
+    # Check for built-in handlers
+    case "$cmd" in
+        ",")
+            # Shortcut for bwm (Bitwarden menu)
+            debug_log "Running bwm shortcut"
+            bwm
+            ;;
+        "'")
+            # Shortcut for ente-otp-manager
+            debug_log "Running ente-otp-manager shortcut"
+            ente-otp-manager
+            ;;
+        "&")
+            # Shortcut for wifimenu
+            debug_log "Running wifimenu shortcut"
+            wifimenu "--$MENU_CMD"
+            ;;
+        *)
+            # Try to execute as regular command
+            debug_log "Executing as regular command: $cmd"
+            eval "$cmd"
+            ;;
+    esac
+}
+
+# Function to get available commands
+get_available_commands() {
+    # scan PATH directories for executables (including symlinks)
+    echo "$PATH" | tr ':' '\n' | while read -r dir; do
+        [ -d "$dir" ] && find "$dir" -maxdepth 1 \( -type f -o -type l \) -executable -printf '%f\n' 2>/dev/null
+    done | sort -u
+    
+    # Add built-in commands (for backwards compatibility)
+    if [ "${INCLUDE_BUILTIN_COMMANDS:-1}" = "1" ]; then
+        # Special shortcut commands
+        echo ","
+        echo "'"
+        echo "&"
+    fi
+}
+
+# Main execution
+main() {
+    local main_menu_opts="${MAIN_MENU_OPTS:-$MENU_OPTS}"
+    
+    # Adjust options for dmenu vs bemenu if needed
+    if [ "$MENU_CMD" = "dmenu" ]; then
+        # dmenu uses -l for lines, same as bemenu, so should be compatible
+        # Add default dmenu styling if on X11
+        main_menu_opts="$main_menu_opts"
+    fi
+    
+    debug_log "Starting menu_custom with opts: $main_menu_opts"
+    debug_log "Config dir: $CONFIG_DIR"
+    debug_log "Commands dir: $COMMANDS_DIR"
+    
+    get_available_commands | sort -u | $MENU_CMD $main_menu_opts | while read cmd; do
+        debug_log "Selected command: $cmd"
+        if [ -n "$cmd" ]; then
+            run_custom_command "$cmd"
+        fi
+    done
+}
+
+# Run main function
+main "$@"

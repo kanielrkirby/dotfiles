@@ -1,0 +1,24 @@
+[[language]]
+name = "javascript"
+formatter = { command = "prettier", args = ["--stdin-filepath", "file.js"] }
+auto-format = true
+
+[[language]]
+name = "typescript"
+formatter = { command = "prettier", args = ["--stdin-filepath", "file.ts"] }
+auto-format = true
+
+[[language]]
+name = "jsx"
+formatter = { command = "prettier", args = ["--stdin-filepath", "file.jsx"] }
+auto-format = true
+
+[[language]]
+name = "tsx"
+formatter = { command = "prettier", args = ["--stdin-filepath", "file.tsx"] }
+auto-format = true
+
+[[language]]
+name = "json"
+formatter = { command = "prettier", args = ["--stdin-filepath", "file.json"] }
+auto-format = true

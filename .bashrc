@@ -6,7 +6,11 @@ alias y="yazi"
 nope() { nohup "$@" > /dev/null 2>&1 & }
 eval "$(zoxide init bash)"
 shopt -s globstar
-. /usr/share/doc/fzf/examples/{key-bindings,completion}.bash
+
+# FZF integration
+if command -v fzf &> /dev/null; then
+  eval "$(fzf --bash)"
+fi
 
 [ "$TERM" = "linux" ] && printf '\e]P489b4fa'
 

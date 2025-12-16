@@ -8,6 +8,8 @@ config.set("auto_save.session", True)
 
 # Use unambiguous characters for hints (no 0/O, 1/l/I, i/j confusion)
 config.set("hints.chars", "asdfghjkwertyupzxcvbnm")
+# Word mode uses dictionary words to prevent confusing letter combos
+config.set("hints.mode", "word")
 
 config.set("completion.web_history.max_items", 0)
 config.set("completion.cmd_history_max_items", 0)

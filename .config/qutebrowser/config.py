@@ -6,8 +6,8 @@ config.load_autoconfig()
 # Session management - restore tabs on startup
 config.set("auto_save.session", True)
 
-# Use unambiguous characters for hints (no 0/O, 1/l/I, o/0 confusion)
-config.set("hints.chars", "asdfghjkwertyuipzxcvbnm")
+# Use unambiguous characters for hints (no 0/O, 1/l/I, i/j confusion)
+config.set("hints.chars", "asdfghjkwertyupzxcvbnm")
 
 config.set("completion.web_history.max_items", 0)
 config.set("completion.cmd_history_max_items", 0)

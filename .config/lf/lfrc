@@ -1,0 +1,91 @@
+# Basic settings
+set shell sh
+set shellopts '-eu'
+set ifs "\n"
+set scrolloff 10
+set icons
+set period 1
+set hiddenfiles ".*:*.aux:*.log:*.bbl:*.bcf:*.blg:*.run.xml"
+
+# Use the `dim` attribute instead of underline for the cursor in the preview pane
+set cursorpreviewfmt "\033[7;2m"
+
+# Remove default bindings we're overriding
+map d
+map D
+
+# d -> trash with confirmation
+cmd trash %{{
+    set -f
+    printf "trash %s? [y/N] " "$fx"
+    read ans
+    if [ "$ans" = "y" ] || [ "$ans" = "Y" ]; then
+        echo "$fx" | while IFS= read -r file; do
+            trash-put "$file"
+        done
+        echo "trashed"
+    fi
+}}
+map d trash
+
+# D -> rm with confirmation
+cmd delete %{{
+    set -f
+    printf "delete %s? [y/N] " "$fx"
+    read ans
+    if [ "$ans" = "y" ] || [ "$ans" = "Y" ]; then
+        echo "$fx" | while IFS= read -r file; do
+            rm -rf "$file"
+        done
+        echo "deleted"
+    fi
+}}
+map D delete
+
+# x -> cut
+map x cut
+
+# r -> rename (bulk rename if multiple selected)
+cmd rename %{{
+    set -f
+    if [ -n "$fs" ]; then
+        # Multiple files selected - bulk rename with $EDITOR
+        tmpfile=$(mktemp)
+        echo "$fs" > "$tmpfile"
+        origfile=$(mktemp)
+        echo "$fs" > "$origfile"
+        ${EDITOR:-vi} "$tmpfile"
+        
+        # Read original and new names, rename line by line
+        paste "$origfile" "$tmpfile" | while IFS="$(printf '\t')" read -r orig new; do
+            if [ "$orig" != "$new" ] && [ -n "$new" ]; then
+                mv -- "$orig" "$new"
+            fi
+        done
+        rm -f "$tmpfile" "$origfile"
+        lf -remote "send $id unselect"
+        lf -remote "send $id reload"
+    else
+        # Single file - inline rename
+        lf -remote "send $id rename"
+    fi
+}}
+map r rename
+
+# F -> grep all files recursively (including gitignored)
+cmd grep-all ${{
+    result=$(rg --files --hidden --no-ignore 2>/dev/null | fzf --preview 'rg --color=always --context 2 {} 2>/dev/null || cat {}')
+    if [ -n "$result" ]; then
+        lf -remote "send $id select \"$result\""
+    fi
+}}
+map F grep-all
+
+# f -> grep files recursively (respecting .gitignore)
+cmd grep-git ${{
+    result=$(rg --files --hidden 2>/dev/null | fzf --preview 'rg --color=always --context 2 {} 2>/dev/null || cat {}')
+    if [ -n "$result" ]; then
+        lf -remote "send $id select \"$result\""
+    fi
+}}
+map f grep-git

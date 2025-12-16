@@ -1,12 +1,14 @@
---- a/config.def.h	2025-12-15 22:28:01.590534195 -0500
-+++ b/config.def.h	2025-12-15 22:12:30.735022101 -0500
+diff --git a/config.def.h b/config.def.h
+index 81c3fc0..2cfc769 100644
+--- a/config.def.h
++++ b/config.def.h
 @@ -1,4 +1,5 @@
  /* See LICENSE file for copyright and license details. */
 +#include <X11/XF86keysym.h>
  
  /* appearance */
  static const unsigned int borderpx  = 1;        /* border pixel of windows */
-@@ -46,56 +47,97 @@
+@@ -46,56 +47,107 @@ static const Layout layouts[] = {
  };
  
  /* key definitions */
@@ -32,6 +34,12 @@
 +static const char *dmenucmd[] = { "menu_custom", "-m", dmenumon, "-fn", dmenufont, "-nb", col_gray1, "-nf", col_gray3, "-sb", col_cyan, "-sf", col_gray4, NULL };
  static const char *termcmd[]  = { "st", NULL };
  
++/* screenshot commands */
++static const char *screenshot_select[] = { "sh", "-c", "maim -s | xclip -selection clipboard -t image/png", NULL };
++static const char *screenshot_edit[] = { "sh", "-c", "maim -s /tmp/screenshot.png && gimp /tmp/screenshot.png && xclip -selection clipboard -t image/png < /tmp/screenshot.png && rm /tmp/screenshot.png", NULL };
++static const char *screenshot_full[] = { "sh", "-c", "maim | xclip -selection clipboard -t image/png", NULL };
++static const char *screenshot_full_edit[] = { "sh", "-c", "maim /tmp/screenshot.png && gimp /tmp/screenshot.png && xclip -selection clipboard -t image/png < /tmp/screenshot.png && rm /tmp/screenshot.png", NULL };
++
 +/* brightness control function */
 +void
 +brightness(const Arg *arg) {
@@ -133,6 +141,10 @@
 +	TAGKEYS(                       XK_7,                           6)
 +	TAGKEYS(                       XK_8,                           7)
 +	TAGKEYS(                       XK_9,                           8)
++	{ SUPER|ALT,                   XK_3,           spawn,          {.v = screenshot_select } },
++	{ SUPER|ALT,                   XK_4,           spawn,          {.v = screenshot_edit } },
++	{ SUPER|ALT,                   XK_5,           spawn,          {.v = screenshot_full } },
++	{ SUPER|ALT,                   XK_6,           spawn,          {.v = screenshot_full_edit } },
 +	{ SUPER|ShiftMask,             XK_q,           quit,           {0} },
 +	{ 0,                           XF86XK_MonBrightnessUp,         brightness,              {.i = (1 << 8) | 5 } },
 +	{ 0,                           XF86XK_MonBrightnessDown,       brightness,              {.i = (0 << 8) | 5 } },
@@ -144,7 +156,7 @@
  };
  
  /* button definitions */
-@@ -106,12 +148,12 @@
+@@ -106,12 +158,12 @@ static const Button buttons[] = {
  	{ ClkLtSymbol,          0,              Button3,        setlayout,      {.v = &layouts[2]} },
  	{ ClkWinTitle,          0,              Button2,        zoom,           {0} },
  	{ ClkStatusText,        0,              Button2,        spawn,          {.v = termcmd } },

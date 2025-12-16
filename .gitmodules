@@ -1,0 +1,18 @@
+[submodule "patches/dwl/dwl"]
+	path = patches/dwl/dwl
+	url = https://codeberg.org/dwl/dwl.git
+[submodule "patches/dwm/dwm"]
+	path = patches/dwm/dwm
+	url = https://git.suckless.org/dwm
+[submodule "patches/st/st"]
+	path = patches/st/st
+	url = https://git.suckless.org/st
+[submodule "patches/dwmblocks/dwmblocks"]
+	path = patches/dwmblocks/dwmblocks
+	url = https://github.com/torrinfail/dwmblocks.git
+[submodule "patches/dwlb/dwlb"]
+	path = patches/dwlb/dwlb
+	url = https://github.com/kolunmi/dwlb.git
+[submodule "patches/dwlblocks/dwlblocks"]
+	path = patches/dwlblocks/dwlblocks
+	url = https://git.sr.ht/~raphi/someblocks

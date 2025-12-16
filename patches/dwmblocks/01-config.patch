@@ -1,0 +1,24 @@
+--- a/blocks.def.h	2025-12-15 22:28:06.010256122 -0500
++++ b/blocks.def.h	2025-12-15 22:12:30.736022112 -0500
+@@ -1,11 +1,16 @@
+ //Modify this file to change what commands output to your statusbar, and recompile using the make command.
+ static const Block blocks[] = {
+ 	/*Icon*/	/*Command*/		/*Update Interval*/	/*Update Signal*/
+-	{"Mem:", "free -h | awk '/^Mem/ { print $3\"/\"$2 }' | sed s/i//g",	30,		0},
+-
+-	{"", "date '+%b %d (%a) %I:%M%p'",					5,		0},
++	{"", "brightnessctl g | awk '{printf \"%d\", $1*100/255}' && printf '%%   '",					5,		0},
++	{"", "wpctl get-volume @DEFAULT_AUDIO_SINK@ | grep -q 'MUTED' && printf 'M ' || printf ''",				1,		0},
++	{"", "wpctl get-volume @DEFAULT_AUDIO_SINK@ | awk '{printf \"%d\", int($2*100)}' && printf '%%   '",				1,		0},
++	{"", "date '+%a %Y-%m-%d %H:%M'",											5,		0},
++	{"", "printf '   '",														0,		0},
++	{"", "grep -q Discharging /sys/class/power_supply/BAT0/status 2>/dev/null && printf 'D ' || printf 'C '",	10,		0},
++	{"", "cat /sys/class/power_supply/BAT0/capacity 2>/dev/null",									10,		0},
++	{"", "printf '%%'",														0,		0},
+ };
+ 
+ //sets delimiter between status commands. NULL character ('\0') means no delimiter.
+-static char delim[] = " | ";
+-static unsigned int delimLen = 5;
++static char delim[] = "";
++static unsigned int delimLen = 0;

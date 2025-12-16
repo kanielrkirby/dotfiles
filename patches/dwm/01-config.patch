@@ -1,5 +1,5 @@
 diff --git a/config.def.h b/config.def.h
-index 81c3fc0..18cff12 100644
+index 81c3fc0..9064a23 100644
 --- a/config.def.h
 +++ b/config.def.h
 @@ -1,4 +1,5 @@
@@ -8,7 +8,7 @@ index 81c3fc0..18cff12 100644
  
  /* appearance */
  static const unsigned int borderpx  = 1;        /* border pixel of windows */
-@@ -46,56 +47,107 @@ static const Layout layouts[] = {
+@@ -46,56 +47,103 @@ static const Layout layouts[] = {
  };
  
  /* key definitions */
@@ -35,10 +35,8 @@ index 81c3fc0..18cff12 100644
  static const char *termcmd[]  = { "st", NULL };
  
 +/* screenshot commands */
-+static const char *screenshot_select[] = { "sh", "-c", "maim -s | xclip -selection clipboard -t image/png", NULL };
-+static const char *screenshot_edit[] = { "flameshot", "gui", NULL };
-+static const char *screenshot_full[] = { "sh", "-c", "maim | xclip -selection clipboard -t image/png", NULL };
-+static const char *screenshot_full_edit[] = { "flameshot", "full", NULL };
++static const char *screenshot_clipboard[] = { "flameshot", "gui", "--clipboard", NULL };
++static const char *screenshot_file[] = { "sh", "-c", "flameshot gui --path ~/Pictures --accept-on-select --delay 200", NULL };
 +
 +/* brightness control function */
 +void
@@ -141,10 +139,8 @@ index 81c3fc0..18cff12 100644
 +	TAGKEYS(                       XK_7,                           6)
 +	TAGKEYS(                       XK_8,                           7)
 +	TAGKEYS(                       XK_9,                           8)
-+	{ SUPER|ALT,                   XK_3,           spawn,          {.v = screenshot_select } },
-+	{ SUPER|ALT,                   XK_4,           spawn,          {.v = screenshot_edit } },
-+	{ SUPER|ALT,                   XK_5,           spawn,          {.v = screenshot_full } },
-+	{ SUPER|ALT,                   XK_6,           spawn,          {.v = screenshot_full_edit } },
++	{ SUPER|ALT,                   XK_3,           spawn,          {.v = screenshot_clipboard } },
++	{ SUPER|ALT,                   XK_4,           spawn,          {.v = screenshot_file } },
 +	{ SUPER|ShiftMask,             XK_q,           quit,           {0} },
 +	{ 0,                           XF86XK_MonBrightnessUp,         brightness,              {.i = (1 << 8) | 5 } },
 +	{ 0,                           XF86XK_MonBrightnessDown,       brightness,              {.i = (0 << 8) | 5 } },
@@ -156,7 +152,7 @@ index 81c3fc0..18cff12 100644
  };
  
  /* button definitions */
-@@ -106,12 +158,12 @@ static const Button buttons[] = {
+@@ -106,12 +154,12 @@ static const Button buttons[] = {
  	{ ClkLtSymbol,          0,              Button3,        setlayout,      {.v = &layouts[2]} },
  	{ ClkWinTitle,          0,              Button2,        zoom,           {0} },
  	{ ClkStatusText,        0,              Button2,        spawn,          {.v = termcmd } },

@@ -6,11 +6,6 @@ config.load_autoconfig()
 # Session management - restore tabs on startup
 config.set("auto_save.session", True)
 
-# Use unambiguous characters for hints (no 0/O, 1/l/I, i/j confusion)
-config.set("hints.chars", "asdfghjkwertyupzxcvbnm")
-# Word mode uses dictionary words to prevent confusing letter combos
-config.set("hints.mode", "word")
-
 config.set("completion.web_history.max_items", 0)
 config.set("completion.cmd_history_max_items", 0)
 # config.set("content.private_browsing", True)
@@ -52,10 +47,10 @@ config.bind("<Alt-Shift-(>", "tab-move 9")
 
 
 redirects = {
-    "dms.local": "http://dms.local:7369",
-    "turner.local": "http://turner.local:7169",
-    "airtite.local": "http://airtite.local:7069",
-    "gap.local": "http://gap.local:7269",
+    "airtite.local": "http://airtite.local:7269",
+    "gap.local": "http://gap.local:7369",
+    "turner.local": "http://turner.local:7469",
+    "dms.local": "http://dms.local:7569",
 }
 
 

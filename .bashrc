@@ -1,10 +1,7 @@
 export PATH="$PATH:$HOME/.local/bin"
-export EDITOR="hx"
+export EDITOR="vi"
 export HISTSIZE="1000000"
-alias ls="eza"
-alias y="yazi"
 nope() { nohup "$@" > /dev/null 2>&1 & }
-eval "$(zoxide init bash)"
 shopt -s globstar
 
 # FZF integration

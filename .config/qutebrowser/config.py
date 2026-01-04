@@ -24,6 +24,7 @@ config.set(
         "https://secure.fanboy.co.nz/fanboy-annoyance.txt",
     ],
 )
+config.set("editor.command", ["st", "-e", "vim", "{file}", "+call cursor({line}, {column})"])
 
 # =========
 

@@ -1,6 +1,7 @@
 export PATH="$PATH:$HOME/.local/bin"
 export EDITOR="vi"
 export HISTSIZE="1000000"
+export NIXPKGS_ALLOW_UNFREE=1
 nope() { nohup "$@" > /dev/null 2>&1 & }
 shopt -s globstar
 

@@ -8,7 +8,7 @@ index 81c3fc0..9064a23 100644
  
  /* appearance */
  static const unsigned int borderpx  = 1;        /* border pixel of windows */
-@@ -46,56 +47,103 @@ static const Layout layouts[] = {
+@@ -46,56 +47,107 @@ static const Layout layouts[] = {
  };
  
  /* key definitions */
@@ -37,6 +37,9 @@ index 81c3fc0..9064a23 100644
 +/* screenshot commands */
 +static const char *screenshot_clipboard[] = { "flameshot", "gui", "--clipboard", NULL };
 +static const char *screenshot_file[] = { "sh", "-c", "flameshot gui --path ~/Pictures --accept-on-select --delay 200", NULL };
++
++/* voice commands */
++static const char *whispaste[] = { "whispaste", NULL };
 +
 +/* brightness control function */
 +void
@@ -141,6 +144,7 @@ index 81c3fc0..9064a23 100644
 +	TAGKEYS(                       XK_9,                           8)
 +	{ SUPER|ALT,                   XK_3,           spawn,          {.v = screenshot_clipboard } },
 +	{ SUPER|ALT,                   XK_4,           spawn,          {.v = screenshot_file } },
++	{ SUPER,                       XK_backslash,   spawn,          {.v = whispaste } },
 +	{ SUPER|ShiftMask,             XK_q,           quit,           {0} },
 +	{ 0,                           XF86XK_MonBrightnessUp,         brightness,              {.i = (1 << 8) | 5 } },
 +	{ 0,                           XF86XK_MonBrightnessDown,       brightness,              {.i = (0 << 8) | 5 } },
@@ -152,7 +156,7 @@ index 81c3fc0..9064a23 100644
  };
  
  /* button definitions */
-@@ -106,12 +154,12 @@ static const Button buttons[] = {
+@@ -106,12 +158,12 @@ static const Button buttons[] = {
  	{ ClkLtSymbol,          0,              Button3,        setlayout,      {.v = &layouts[2]} },
  	{ ClkWinTitle,          0,              Button2,        zoom,           {0} },
  	{ ClkStatusText,        0,              Button2,        spawn,          {.v = termcmd } },

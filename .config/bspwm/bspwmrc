@@ -10,7 +10,18 @@ pgrep -x sxhkd > /dev/null || sxhkd &
 pkill -x panel.sh
 pkill -x lemonbar
 sleep 0.5  # Give bspwm time to set up its socket
-$HOME/.config/bspwm/panel.sh | lemonbar -g x22 -B "#1a1a1a" -F "#CCCCCC" -f "DejaVu Sans Mono:size=10" &
+$HOME/.config/bspwm/panel.sh | lemonbar -n "panel" -g x22 -B "#1a1a1a" -F "#CCCCCC" -f "DejaVu Sans Mono:size=10" &
+
+# Hide/show bar on fullscreen
+bspc subscribe node_state | while read -r event monitor desktop node state flag; do
+    if [ "$state" = "fullscreen" ]; then
+        if [ "$flag" = "on" ]; then
+            xdo hide -N "panel"
+        else
+            xdo show -N "panel"
+        fi
+    fi
+done &
 
 # Window appearance
 bspc config border_width         1

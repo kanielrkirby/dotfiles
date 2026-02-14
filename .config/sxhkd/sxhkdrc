@@ -19,7 +19,7 @@ super + comma
 	rbwm
 
 # ente auth menu
-super + apostrophe
+super + period
 	entemenu
 
 # make sxhkd reload its configuration files:

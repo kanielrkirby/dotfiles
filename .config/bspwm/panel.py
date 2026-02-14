@@ -3,7 +3,12 @@ import subprocess
 import sys
 import threading
 import time
+import os
+import signal
+import fcntl
 from pathlib import Path
+
+# No automatic cleanup - bspwmrc handles it
 
 # Panel state - cached values
 state = {
@@ -120,13 +125,22 @@ def update_bluetooth():
     """Update Bluetooth state"""
     # Check headphones (MOMENTUM TW 4)
     headphones_info = run_cmd("bluetoothctl info 80:C3:BA:53:50:59 2>/dev/null")
-    h = "H" if "Connected: yes" in headphones_info else "-"
+    h_connected = "Connected: yes" in headphones_info
     
     # Check mouse (MX Master 3S)
     mouse_info = run_cmd("bluetoothctl info D8:C8:63:41:63:DB 2>/dev/null")
-    m = "M" if "Connected: yes" in mouse_info else "-"
+    m_connected = "Connected: yes" in mouse_info
     
-    bluetooth = f"{h}{m}"
+    # Build clickable bluetooth indicators with desktop-style shading
+    h_color = "#FFFFFF" if h_connected else "#444444"
+    m_color = "#FFFFFF" if m_connected else "#444444"
+    
+    # Inline bluetooth toggle commands
+    h_cmd = '/home/mx/.config/bspwm/panel-toggle-bt-headphones.sh'
+    m_cmd = '/home/mx/.config/bspwm/panel-toggle-bt-mouse.sh'
+    
+    bluetooth = f"%{{A:{h_cmd}:}}%{{F{h_color}}}[H]%{{F-}}%{{A}} %{{A:{m_cmd}:}}%{{F{m_color}}}[M]%{{F-}}%{{A}}"
+    
     with lock:
         state['bluetooth'] = bluetooth
 
@@ -134,13 +148,13 @@ def render_bar():
     """Render the complete bar"""
     with lock:
         # Build clickable elements
-        vpn_click = f"%{{A:sh -c 'if mullvad status | grep -q Connected; then mullvad disconnect; else mullvad connect; fi':}}%{{A3:mullvad reconnect:}}{state['vpn']}%{{A}}%{{A}}"
+        vpn_click = '%{A:/home/mx/.config/bspwm/panel-toggle-vpn.sh:}%{A3:mullvad reconnect:}' + state['vpn'] + '%{A}%{A}'
         
-        network_click = f"%{{A:sh -c 'test $(nmcli radio wifi) = enabled && nmcli radio wifi off || nmcli radio wifi on':}}%{{A3:sh -c 'st -e nmtui':}}{state['network']}%{{A}}%{{A}}"
+        network_click = '%{A:/home/mx/.config/bspwm/panel-toggle-wifi.sh:}%{A3:st -e nmtui:}' + state["network"] + '%{A}%{A}'
         
         volume_click = f"%{{A:wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle:}}{state['volume']}%{{A}}"
         
-        datetime_click = f"%{{A:sh -c 'if [ $(cat /tmp/panel_date_format 2>/dev/null || echo compact) = compact ]; then echo verbose > /tmp/panel_date_format; else echo compact > /tmp/panel_date_format; fi':}}%{{A3:sh -c 'date \"+%A, %B %d, %Y %I:%M %p\" | xclip -selection clipboard':}}{state['datetime']}%{{A}}%{{A}}"
+        datetime_click = '%{A:/home/mx/.config/bspwm/panel-toggle-date.sh:}%{A3:/home/mx/.config/bspwm/panel-copy-date.sh:}' + state["datetime"] + '%{A}%{A}'
         
         left = f"%{{l}} {state['desktops']}"
         right = f"{vpn_click}   {network_click}   {state['bluetooth']}   {state['brightness']}%   {volume_click}   {datetime_click}   {state['battery']}"

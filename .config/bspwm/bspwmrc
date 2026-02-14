@@ -1,4 +1,4 @@
-#! /bin/sh
+#!/usr/bin/env bash
 
 # Configure monitors and desktops (9 desktops)
 bspc monitor -d 1 2 3 4 5 6 7 8 9
@@ -7,12 +7,11 @@ bspc monitor -d 1 2 3 4 5 6 7 8 9
 pgrep -x sxhkd > /dev/null || sxhkd &
 
 # Start lemonbar panel (after bspwm is configured)
-pkill -x panel.sh
-pkill -x panel.py
-pkill -x python
-pkill -x lemonbar
-sleep 0.5  # Give bspwm time to set up its socket
-$HOME/.config/bspwm/panel.py | lemonbar -n "panel" -a 20 -g x22 -B "#1a1a1a" -F "#CCCCCC" -f "DejaVu Sans Mono:size=10" -f "Noto Color Emoji:size=10" | sh &
+pkill -9 -f "panel.py"
+pkill -9 -f "lemonbar"
+sleep 1
+export PATH="/run/current-system/sw/bin:$PATH"
+/home/mx/.config/bspwm/panel.py 2>/dev/null | lemonbar -n "panel" -a 32 -g x22 -B "#1a1a1a" -F "#CCCCCC" -f "DejaVu Sans Mono:size=10" | bash &
 
 # Hide/show bar on fullscreen
 {

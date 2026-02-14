@@ -13,15 +13,16 @@ sleep 0.5  # Give bspwm time to set up its socket
 $HOME/.config/bspwm/panel.sh | lemonbar -n "panel" -g x22 -B "#1a1a1a" -F "#CCCCCC" -f "DejaVu Sans Mono:size=10" &
 
 # Hide/show bar on fullscreen
-bspc subscribe node_state | while read -r event monitor desktop node state flag; do
-    if [ "$state" = "fullscreen" ]; then
-        if [ "$flag" = "on" ]; then
+{
+    bspc subscribe node_state desktop_focus node_focus | while read -r event rest; do
+        # Check if any window on the current desktop is fullscreen
+        if bspc query -N -n .focused.fullscreen -d focused &>/dev/null; then
             xdotool search --classname lemonbar windowunmap
         else
             xdotool search --classname lemonbar windowmap
         fi
-    fi
-done &
+    done
+} &
 
 # Window appearance
 bspc config border_width         1

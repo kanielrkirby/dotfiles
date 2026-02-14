@@ -14,6 +14,7 @@ state = {
     'datetime': '',
     'vpn': 'Unsecured',
     'network': 'Disconnected',
+    'bluetooth': '',
 }
 
 # Lock for thread-safe updates
@@ -115,6 +116,20 @@ def update_network():
     with lock:
         state['network'] = network
 
+def update_bluetooth():
+    """Update Bluetooth state"""
+    # Check headphones (MOMENTUM TW 4)
+    headphones_info = run_cmd("bluetoothctl info 80:C3:BA:53:50:59 2>/dev/null")
+    h = "H" if "Connected: yes" in headphones_info else "-"
+    
+    # Check mouse (MX Master 3S)
+    mouse_info = run_cmd("bluetoothctl info D8:C8:63:41:63:DB 2>/dev/null")
+    m = "M" if "Connected: yes" in mouse_info else "-"
+    
+    bluetooth = f"{h}{m}"
+    with lock:
+        state['bluetooth'] = bluetooth
+
 def render_bar():
     """Render the complete bar"""
     with lock:
@@ -128,7 +143,7 @@ def render_bar():
         datetime_click = f"%{{A:sh -c 'if [ $(cat /tmp/panel_date_format 2>/dev/null || echo compact) = compact ]; then echo verbose > /tmp/panel_date_format; else echo compact > /tmp/panel_date_format; fi':}}%{{A3:sh -c 'date \"+%A, %B %d, %Y %I:%M %p\" | xclip -selection clipboard':}}{state['datetime']}%{{A}}%{{A}}"
         
         left = f"%{{l}} {state['desktops']}"
-        right = f"{vpn_click}   {network_click}   {state['brightness']}%   {volume_click}   {datetime_click}   {state['battery']}"
+        right = f"{vpn_click}   {network_click}   {state['bluetooth']}   {state['brightness']}%   {volume_click}   {datetime_click}   {state['battery']}"
         
         output = f"%{{B#1a1a1a}}%{{F#CCCCCC}}{left}%{{r}}{right} "
     
@@ -305,6 +320,26 @@ def watch_network():
             update_network()
             render_bar()
 
+def watch_bluetooth():
+    """Watch Bluetooth connection changes"""
+    update_bluetooth()
+    
+    # Monitor bluetoothctl for connection events
+    proc = subprocess.Popen(
+        ["stdbuf", "-oL", "bluetoothctl"],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        text=True,
+        stderr=subprocess.DEVNULL
+    )
+    
+    if proc.stdout:
+        for line in proc.stdout:
+            # Look for connection state changes
+            if "Connected: yes" in line or "Connected: no" in line:
+                update_bluetooth()
+                render_bar()
+
 if __name__ == "__main__":
     # Initialize all states
     update_desktops()
@@ -314,6 +349,7 @@ if __name__ == "__main__":
     update_datetime()
     update_vpn()
     update_network()
+    update_bluetooth()
     
     # Render initial bar
     render_bar()
@@ -329,6 +365,7 @@ if __name__ == "__main__":
         threading.Thread(target=watch_date_format, daemon=True),
         threading.Thread(target=watch_vpn, daemon=True),
         threading.Thread(target=watch_network, daemon=True),
+        threading.Thread(target=watch_bluetooth, daemon=True),
     ]
     
     for thread in threads:

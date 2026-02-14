@@ -144,8 +144,8 @@ super + {Left,Down,Up,Right}
 	bspc node -v {-20 0,0 20,0 -20,20 0}
 
 # multi-monitor support
-super + {comma,period}
+super + ctrl + {comma,period}
 	bspc monitor -f {prev,next}
 
-super + shift + {comma,period}
+super + ctrl + shift + {comma,period}
 	bspc node -m {prev,next} --follow

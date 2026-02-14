@@ -39,17 +39,30 @@ def run_cmd(cmd):
         return ""
 
 def update_desktops():
-    """Update desktop state"""
-    current = run_cmd("bspc query -D -d focused --names 2>/dev/null")
-    desktops = ""
-    
-    for i in range(1, 10):
-        occupied = run_cmd(f"bspc query -N -d ^{i} 2>/dev/null | wc -l")
+    """Update desktop state - optimized to avoid shell overhead"""
+    try:
+        # Direct subprocess calls without shell for speed
+        current = subprocess.run(
+            ["bspc", "query", "-D", "-d", "focused", "--names"],
+            capture_output=True, text=True, timeout=0.5
+        ).stdout.strip()
         
+        occupied_raw = subprocess.run(
+            ["bspc", "query", "-D", "-d", ".occupied", "--names"],
+            capture_output=True, text=True, timeout=0.5
+        ).stdout.strip()
+        
+        occupied_desktops = set(occupied_raw.split('\n')) if occupied_raw else set()
+    except:
+        current = ""
+        occupied_desktops = set()
+    
+    desktops = ""
+    for i in range(1, 10):
         if str(i) == current:
             indicator = f"[{i}]"
             desktops += f"%{{A:bspc desktop -f ^{i}:}}%{{F#FFFFFF}}{indicator}%{{F-}}%{{A}}"
-        elif occupied and int(occupied) > 0:
+        elif str(i) in occupied_desktops:
             indicator = f" {i} "
             desktops += f"%{{A:bspc desktop -f ^{i}:}}%{{F#888888}}{indicator}%{{F-}}%{{A}}"
         else:
@@ -166,12 +179,13 @@ def render_bar():
 # Event watchers (each runs in its own thread)
 
 def watch_desktops():
-    """Watch desktop changes"""
+    """Watch desktop changes and node transfers"""
     update_desktops()
     proc = subprocess.Popen(
-        ["stdbuf", "-oL", "bspc", "subscribe", "desktop", "node_transfer"],
+        ["bspc", "subscribe", "desktop_focus", "node_transfer"],
         stdout=subprocess.PIPE,
-        text=True
+        text=True,
+        bufsize=1
     )
     if proc.stdout:
         for line in proc.stdout:

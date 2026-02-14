@@ -10,7 +10,7 @@ pgrep -x sxhkd > /dev/null || sxhkd &
 pkill -x panel.sh
 pkill -x lemonbar
 sleep 0.5  # Give bspwm time to set up its socket
-$HOME/.config/bspwm/panel.sh | lemonbar -n "panel" -g x22 -B "#1a1a1a" -F "#CCCCCC" -f "DejaVu Sans Mono:size=10" &
+$HOME/.config/bspwm/panel.sh | lemonbar -n "panel" -a 20 -g x22 -B "#1a1a1a" -F "#CCCCCC" -f "DejaVu Sans Mono:size=10" | sh &
 
 # Hide/show bar on fullscreen
 {

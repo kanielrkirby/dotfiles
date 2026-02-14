@@ -17,17 +17,17 @@ get_desktops() {
         
         # Use printf to ensure consistent width: 3 chars total ("[1]" or " 1 ")
         if [ "$i" = "$current" ]; then
-            # Active desktop with brackets
+            # Active desktop with brackets (clickable)
             local indicator=$(printf "[%s]" "$i")
-            desktops+="%{F$COLOR_ACTIVE}${indicator}%{F-}"
+            desktops+="%{A:bspc desktop -f ^$i:}%{F$COLOR_ACTIVE}${indicator}%{F-}%{A}"
         elif [ "$occupied" -gt 0 ]; then
-            # Occupied desktop with padding to match bracket width
+            # Occupied desktop with padding to match bracket width (clickable)
             local indicator=$(printf " %s " "$i")
-            desktops+="%{F$COLOR_OCCUPIED}${indicator}%{F-}"
+            desktops+="%{A:bspc desktop -f ^$i:}%{F$COLOR_OCCUPIED}${indicator}%{F-}%{A}"
         else
-            # Empty desktop with padding to match bracket width
+            # Empty desktop with padding to match bracket width (clickable)
             local indicator=$(printf " %s " "$i")
-            desktops+="%{F$COLOR_EMPTY}${indicator}%{F-}"
+            desktops+="%{A:bspc desktop -f ^$i:}%{F$COLOR_EMPTY}${indicator}%{F-}%{A}"
         fi
     done
     
@@ -135,8 +135,17 @@ update_bar() {
     # Build status line
     local left="%{l} $desktops"
     
+    # Make VPN clickable: left=toggle, right=reconnect
+    local vpn_clickable="%{A:sh -c 'if mullvad status | grep -q Connected; then mullvad disconnect; else mullvad connect; fi':}%{A3:mullvad reconnect:}${vpn}%{A}%{A}"
+    
+    # Make network clickable: left=toggle wifi, right=open nmtui
+    local network_clickable="%{A:sh -c 'test \$(nmcli radio wifi) = enabled && nmcli radio wifi off || nmcli radio wifi on':}%{A3:sh -c 'st -e nmtui':}${network}%{A}%{A}"
+    
+    # Make volume clickable: left=mute toggle
+    local volume_clickable="%{A:wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle:}${volume}%{A}"
+    
     # Right side - vpn, network, brightness, volume, date, battery
-    local right="${vpn}   ${network}   ${brightness}%   ${volume}   ${datetime}   ${battery}"
+    local right="${vpn_clickable}   ${network_clickable}   ${brightness}%   ${volume_clickable}   ${datetime}   ${battery}"
     
     echo "%{B$COLOR_BG}%{F$COLOR_FG}${left}%{r}${right} "
 }

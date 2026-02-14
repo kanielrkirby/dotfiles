@@ -10,6 +10,10 @@ super + shift + Return
 super + p
 	menu_custom
 
+# whispaste (voice to text)
+super + backslash
+	whispaste
+
 # make sxhkd reload its configuration files:
 super + Escape
 	pkill -USR1 -x sxhkd

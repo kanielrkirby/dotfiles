@@ -165,7 +165,7 @@ def watch_brightness():
                 render_bar()
 
 def watch_battery():
-    """Watch battery changes"""
+    """Watch battery status changes (charging/discharging) via udev"""
     update_battery()
     proc = subprocess.Popen(
         ["udevadm", "monitor", "--kernel", "--subsystem-match=power_supply"],
@@ -175,9 +175,25 @@ def watch_battery():
     )
     if proc.stdout:
         for line in proc.stdout:
-            if "BAT0" in line or "AC" in line:
+            if "power_supply" in line:
+                # Small delay to let sysfs update after event
+                time.sleep(0.1)
                 update_battery()
                 render_bar()
+
+def watch_battery_percentage():
+    """Poll battery percentage (sysfs doesn't trigger inotify)"""
+    last_capacity = ""
+    while True:
+        time.sleep(10)  # Poll every 10 seconds
+        try:
+            current_capacity = Path("/sys/class/power_supply/BAT0/capacity").read_text().strip()
+            if current_capacity != last_capacity:
+                last_capacity = current_capacity
+                update_battery()
+                render_bar()
+        except:
+            pass
 
 def watch_volume():
     """Watch volume changes via pw-mon"""
@@ -308,6 +324,7 @@ if __name__ == "__main__":
         threading.Thread(target=watch_brightness, daemon=True),
         threading.Thread(target=watch_volume, daemon=True),
         threading.Thread(target=watch_battery, daemon=True),
+        threading.Thread(target=watch_battery_percentage, daemon=True),
         threading.Thread(target=watch_datetime, daemon=True),
         threading.Thread(target=watch_date_format, daemon=True),
         threading.Thread(target=watch_vpn, daemon=True),

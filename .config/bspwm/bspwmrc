@@ -16,9 +16,9 @@ $HOME/.config/bspwm/panel.sh | lemonbar -n "panel" -g x22 -B "#1a1a1a" -F "#CCCC
 bspc subscribe node_state | while read -r event monitor desktop node state flag; do
     if [ "$state" = "fullscreen" ]; then
         if [ "$flag" = "on" ]; then
-            xdo hide -N "panel"
+            xdotool search --classname lemonbar windowunmap
         else
-            xdo show -N "panel"
+            xdotool search --classname lemonbar windowmap
         fi
     fi
 done &

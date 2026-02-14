@@ -169,7 +169,7 @@ def watch_desktops():
     """Watch desktop changes"""
     update_desktops()
     proc = subprocess.Popen(
-        ["stdbuf", "-oL", "bspc", "subscribe", "desktop"],
+        ["stdbuf", "-oL", "bspc", "subscribe", "desktop", "node_transfer"],
         stdout=subprocess.PIPE,
         text=True
     )

@@ -52,19 +52,19 @@ super + semicolon ; w ; d
 
 # Bluetooth controls - connect headphones
 super + semicolon ; b ; c ; h
-	sh -c 'notify-send -r 9003 "Bluetooth" "Connecting to headphones..."; bluetoothctl connect 80:C3:BA:53:50:59 >/dev/null 2>&1; sleep 2; notify-send -r 9003 "Bluetooth" "Connected to headphones"'
+	sh -c 'notify-send -r 9003 "Bluetooth" "Connecting to headphones..."; bluetoothctl connect 80:C3:BA:53:50:59 >/dev/null 2>&1 && notify-send -r 9003 "Bluetooth" "Connected to headphones" || notify-send -r 9003 "Bluetooth" "Failed to connect headphones"'
 
 # Bluetooth controls - connect mouse
 super + semicolon ; b ; c ; m
-	sh -c 'notify-send -r 9003 "Bluetooth" "Connecting to mouse..."; bluetoothctl connect D8:C8:63:41:63:DB >/dev/null 2>&1; sleep 2; notify-send -r 9003 "Bluetooth" "Connected to mouse"'
+	sh -c 'notify-send -r 9003 "Bluetooth" "Connecting to mouse..."; bluetoothctl connect D8:C8:63:41:63:DB >/dev/null 2>&1 && notify-send -r 9003 "Bluetooth" "Connected to mouse" || notify-send -r 9003 "Bluetooth" "Failed to connect mouse"'
 
 # Bluetooth controls - disconnect headphones
 super + semicolon ; b ; d ; h
-	sh -c 'notify-send -r 9003 "Bluetooth" "Disconnecting headphones..."; bluetoothctl disconnect 80:C3:BA:53:50:59 >/dev/null 2>&1; sleep 1; notify-send -r 9003 "Bluetooth" "Disconnected headphones"'
+	sh -c 'notify-send -r 9003 "Bluetooth" "Disconnecting headphones..."; bluetoothctl disconnect 80:C3:BA:53:50:59 >/dev/null 2>&1 && notify-send -r 9003 "Bluetooth" "Disconnected headphones" || notify-send -r 9003 "Bluetooth" "Failed to disconnect headphones"'
 
 # Bluetooth controls - disconnect mouse
 super + semicolon ; b ; d ; m
-	sh -c 'notify-send -r 9003 "Bluetooth" "Disconnecting mouse..."; bluetoothctl disconnect D8:C8:63:41:63:DB >/dev/null 2>&1; sleep 1; notify-send -r 9003 "Bluetooth" "Disconnected mouse"'
+	sh -c 'notify-send -r 9003 "Bluetooth" "Disconnecting mouse..."; bluetoothctl disconnect D8:C8:63:41:63:DB >/dev/null 2>&1 && notify-send -r 9003 "Bluetooth" "Disconnected mouse" || notify-send -r 9003 "Bluetooth" "Failed to disconnect mouse"'
 
 # screenshots
 super + alt + 3

@@ -92,26 +92,33 @@ get_date() {
 
 # Get VPN status
 get_vpn() {
-    local status=$(mullvad status 2>/dev/null)
+    local vpn_status=$(mullvad status 2>/dev/null)
     
-    if echo "$status" | grep -q "Connected"; then
-        # Extract relay code: "us-sjc-wg-302"
-        local relay=$(echo "$status" | grep "Relay:" | awk '{print $2}')
-        echo "$relay"
-    elif echo "$status" | grep -q "Connecting"; then
+    # Determine VPN state
+    if echo "$vpn_status" | grep -q "Connected"; then
+        # Extract full relay code: "us-phx-wg-208"
+        echo "$(echo "$vpn_status" | grep "Relay:" | awk '{print $2}')"
+    elif echo "$vpn_status" | grep -q "Connecting"; then
         echo "Connecting"
+    elif echo "$vpn_status" | grep -q "Blocked"; then
+        echo "Blocked"
     else
-        echo "Disconnected"
+        echo "Unsecured"
     fi
 }
 
-# Get WiFi status
-get_wifi() {
+# Get network connection (WiFi/Ethernet)
+get_network() {
+    # Determine network connection (WiFi > Ethernet > Disconnected)
     local wifi=$(nmcli -t -f active,ssid dev wifi | grep '^yes' | cut -d: -f2)
+    local ethernet=$(nmcli -t -f device,state dev | grep 'ethernet:connected' | cut -d: -f1)
+    
     if [ -n "$wifi" ]; then
         echo "$wifi"
+    elif [ -n "$ethernet" ]; then
+        echo "Wired"
     else
-        echo ""
+        echo "Disconnected"
     fi
 }
 
@@ -123,16 +130,13 @@ update_bar() {
     local battery=$(get_battery)
     local datetime=$(get_date)
     local vpn=$(get_vpn)
-    local wifi=$(get_wifi)
+    local network=$(get_network)
     
     # Build status line
     local left="%{l} $desktops"
     
-    # Right side - build in correct order: VPN WiFi brightness volume date battery
-    local right=""
-    [ -n "$vpn" ] && right="${right}${vpn} "
-    [ -n "$wifi" ] && right="${right}${wifi}  "
-    right="${right} ${brightness}%   ${volume}   ${datetime}   ${battery}"
+    # Right side - vpn, network, brightness, volume, date, battery
+    local right="${vpn}   ${network}   ${brightness}%   ${volume}   ${datetime}   ${battery}"
     
     echo "%{B$COLOR_BG}%{F$COLOR_FG}${left}%{r}${right} "
 }

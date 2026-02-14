@@ -188,6 +188,12 @@ pactl subscribe 2>/dev/null | grep --line-buffered "sink" | while read; do
     update_bar
 done &
 
+# Date format toggle trigger
+[ ! -f /tmp/panel_date_format ] && echo "compact" > /tmp/panel_date_format
+inotifywait -m -q -e close_write /tmp/panel_date_format 2>/dev/null | while read; do
+    update_bar
+done &
+
 # VPN/WiFi polling (every 3s)
 while true; do
     sleep 3

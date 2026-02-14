@@ -6,6 +6,7 @@ import time
 import os
 import signal
 import fcntl
+import json
 from pathlib import Path
 
 # No automatic cleanup - bspwmrc handles it
@@ -39,20 +40,31 @@ def run_cmd(cmd):
         return ""
 
 def update_desktops():
-    """Update desktop state - optimized to avoid shell overhead"""
+    """Update desktop state - single bspc call for maximum performance"""
     try:
-        # Direct subprocess calls without shell for speed
-        current = subprocess.run(
-            ["bspc", "query", "-D", "-d", "focused", "--names"],
+        # Use bspc wm -d JSON dump - ONE call instead of two separate queries
+        result = subprocess.run(
+            ["bspc", "wm", "-d"],
             capture_output=True, text=True, timeout=0.5
-        ).stdout.strip()
+        )
         
-        occupied_raw = subprocess.run(
-            ["bspc", "query", "-D", "-d", ".occupied", "--names"],
-            capture_output=True, text=True, timeout=0.5
-        ).stdout.strip()
+        data = json.loads(result.stdout)
         
-        occupied_desktops = set(occupied_raw.split('\n')) if occupied_raw else set()
+        # Parse JSON to get current and occupied desktops
+        current = ""
+        occupied_desktops = set()
+        
+        focused_mon_id = data.get('focusedMonitorId')
+        for mon in data.get('monitors', []):
+            focused_desk_id = mon.get('focusedDesktopId')
+            for desk in mon.get('desktops', []):
+                name = desk.get('name', '')
+                # Check if occupied (has windows)
+                if desk.get('root'):
+                    occupied_desktops.add(name)
+                # Check if focused
+                if mon.get('id') == focused_mon_id and desk.get('id') == focused_desk_id:
+                    current = name
     except:
         current = ""
         occupied_desktops = set()
@@ -74,24 +86,39 @@ def update_desktops():
 
 def update_brightness():
     """Update brightness state"""
-    brightness = run_cmd("brightnessctl -m | cut -d, -f4 | tr -d '%'")
+    try:
+        result = subprocess.run(
+            ["brightnessctl", "-m"],
+            capture_output=True, text=True, timeout=0.5
+        )
+        # Parse machine-readable format: device,class,curr,max,percent
+        brightness = result.stdout.split(',')[3].replace('%', '') if result.stdout else ""
+    except:
+        brightness = ""
     with lock:
         state['brightness'] = brightness
 
 def update_volume():
     """Update volume state"""
-    vol_output = run_cmd("wpctl get-volume @DEFAULT_AUDIO_SINK@ 2>/dev/null")
-    
-    if not vol_output:
+    try:
+        result = subprocess.run(
+            ["wpctl", "get-volume", "@DEFAULT_AUDIO_SINK@"],
+            capture_output=True, text=True, timeout=0.5
+        )
+        vol_output = result.stdout.strip()
+        
+        if not vol_output:
+            volume = "N/A"
+        elif "MUTED" in vol_output:
+            vol = vol_output.split()[1]
+            vol_percent = int(float(vol) * 100)
+            volume = f"M {vol_percent}%"
+        else:
+            vol = vol_output.split()[1]
+            vol_percent = int(float(vol) * 100)
+            volume = f"{vol_percent}%"
+    except:
         volume = "N/A"
-    elif "MUTED" in vol_output:
-        vol = vol_output.split()[1]
-        vol_percent = int(float(vol) * 100)
-        volume = f"M {vol_percent}%"
-    else:
-        vol = vol_output.split()[1]
-        vol_percent = int(float(vol) * 100)
-        volume = f"{vol_percent}%"
     
     with lock:
         state['volume'] = volume
@@ -114,10 +141,20 @@ def update_datetime():
     """Update date/time state"""
     date_format = PANEL_DATE_FORMAT.read_text().strip() if PANEL_DATE_FORMAT.exists() else "compact"
     
-    if date_format == "verbose":
-        datetime = run_cmd('date "+%A, %B %d, %Y %I:%M %p"')
-    else:
-        datetime = run_cmd('date "+%a %Y-%m-%d %H:%M"')
+    try:
+        if date_format == "verbose":
+            result = subprocess.run(
+                ["date", "+%A, %B %d, %Y %I:%M %p"],
+                capture_output=True, text=True, timeout=0.5
+            )
+        else:
+            result = subprocess.run(
+                ["date", "+%a %Y-%m-%d %H:%M"],
+                capture_output=True, text=True, timeout=0.5
+            )
+        datetime = result.stdout.strip()
+    except:
+        datetime = ""
     
     with lock:
         state['datetime'] = datetime
@@ -136,13 +173,23 @@ def update_network():
 
 def update_bluetooth():
     """Update Bluetooth state"""
-    # Check headphones (MOMENTUM TW 4)
-    headphones_info = run_cmd("bluetoothctl info 80:C3:BA:53:50:59 2>/dev/null")
-    h_connected = "Connected: yes" in headphones_info
-    
-    # Check mouse (MX Master 3S)
-    mouse_info = run_cmd("bluetoothctl info D8:C8:63:41:63:DB 2>/dev/null")
-    m_connected = "Connected: yes" in mouse_info
+    try:
+        # Check headphones (MOMENTUM TW 4)
+        h_result = subprocess.run(
+            ["bluetoothctl", "info", "80:C3:BA:53:50:59"],
+            capture_output=True, text=True, timeout=0.5
+        )
+        h_connected = "Connected: yes" in h_result.stdout
+        
+        # Check mouse (MX Master 3S)
+        m_result = subprocess.run(
+            ["bluetoothctl", "info", "D8:C8:63:41:63:DB"],
+            capture_output=True, text=True, timeout=0.5
+        )
+        m_connected = "Connected: yes" in m_result.stdout
+    except:
+        h_connected = False
+        m_connected = False
     
     # Build clickable bluetooth indicators with desktop-style shading
     h_color = "#FFFFFF" if h_connected else "#444444"
@@ -181,12 +228,14 @@ def render_bar():
 def watch_desktops():
     """Watch desktop changes and node transfers"""
     update_desktops()
+    
     proc = subprocess.Popen(
         ["bspc", "subscribe", "desktop_focus", "node_transfer"],
         stdout=subprocess.PIPE,
         text=True,
-        bufsize=1
+        bufsize=0  # Completely unbuffered
     )
+    
     if proc.stdout:
         for line in proc.stdout:
             update_desktops()
@@ -279,15 +328,27 @@ def watch_date_format():
 def watch_vpn():
     """Watch VPN changes"""
     # Initialize VPN cache
-    vpn_status = run_cmd("mullvad status 2>/dev/null")
-    if "Connected" in vpn_status:
-        vpn_relay = run_cmd("mullvad status 2>/dev/null | grep 'Relay:' | awk '{print $2}'")
-        PANEL_VPN.write_text(vpn_relay)
-    elif "Connecting" in vpn_status:
-        PANEL_VPN.write_text("Connecting")
-    elif "Blocked" in vpn_status:
-        PANEL_VPN.write_text("Blocked")
-    else:
+    try:
+        result = subprocess.run(
+            ["mullvad", "status"],
+            capture_output=True, text=True, timeout=1
+        )
+        vpn_status = result.stdout
+        
+        if "Connected" in vpn_status:
+            # Parse relay from status output
+            for line in vpn_status.split('\n'):
+                if "Relay:" in line:
+                    vpn_relay = line.split()[1]
+                    PANEL_VPN.write_text(vpn_relay)
+                    break
+        elif "Connecting" in vpn_status:
+            PANEL_VPN.write_text("Connecting")
+        elif "Blocked" in vpn_status:
+            PANEL_VPN.write_text("Blocked")
+        else:
+            PANEL_VPN.write_text("Unsecured")
+    except:
         PANEL_VPN.write_text("Unsecured")
     
     update_vpn()
@@ -301,15 +362,26 @@ def watch_vpn():
     if proc.stdout:
         for line in proc.stdout:
             # Update cache when status changes
-            vpn_status = run_cmd("mullvad status 2>/dev/null")
-            if "Connected" in vpn_status:
-                vpn_relay = run_cmd("mullvad status 2>/dev/null | grep 'Relay:' | awk '{print $2}'")
-                PANEL_VPN.write_text(vpn_relay)
-            elif "Connecting" in vpn_status:
-                PANEL_VPN.write_text("Connecting")
-            elif "Blocked" in vpn_status:
-                PANEL_VPN.write_text("Blocked")
-            else:
+            try:
+                result = subprocess.run(
+                    ["mullvad", "status"],
+                    capture_output=True, text=True, timeout=1
+                )
+                vpn_status = result.stdout
+                
+                if "Connected" in vpn_status:
+                    for line in vpn_status.split('\n'):
+                        if "Relay:" in line:
+                            vpn_relay = line.split()[1]
+                            PANEL_VPN.write_text(vpn_relay)
+                            break
+                elif "Connecting" in vpn_status:
+                    PANEL_VPN.write_text("Connecting")
+                elif "Blocked" in vpn_status:
+                    PANEL_VPN.write_text("Blocked")
+                else:
+                    PANEL_VPN.write_text("Unsecured")
+            except:
                 PANEL_VPN.write_text("Unsecured")
             
             update_vpn()
@@ -318,12 +390,20 @@ def watch_vpn():
 def watch_network():
     """Watch network changes"""
     # Initialize network cache
-    connection = run_cmd("nmcli -t -f type,state,name connection show --active | head -1")
-    if "802-11-wireless" in connection:
-        PANEL_NETWORK.write_text(connection.split(':')[2] if ':' in connection else "WiFi")
-    elif "802-3-ethernet" in connection:
-        PANEL_NETWORK.write_text("Wired")
-    else:
+    try:
+        result = subprocess.run(
+            ["nmcli", "-t", "-f", "type,state,name", "connection", "show", "--active"],
+            capture_output=True, text=True, timeout=1
+        )
+        connection = result.stdout.split('\n')[0] if result.stdout else ""
+        
+        if "802-11-wireless" in connection:
+            PANEL_NETWORK.write_text(connection.split(':')[2] if ':' in connection else "WiFi")
+        elif "802-3-ethernet" in connection:
+            PANEL_NETWORK.write_text("Wired")
+        else:
+            PANEL_NETWORK.write_text("Disconnected")
+    except:
         PANEL_NETWORK.write_text("Disconnected")
     
     update_network()
@@ -337,12 +417,20 @@ def watch_network():
     if proc.stdout:
         for line in proc.stdout:
             # Update cache when network changes
-            connection = run_cmd("nmcli -t -f type,state,name connection show --active | head -1")
-            if "802-11-wireless" in connection:
-                PANEL_NETWORK.write_text(connection.split(':')[2] if ':' in connection else "WiFi")
-            elif "802-3-ethernet" in connection:
-                PANEL_NETWORK.write_text("Wired")
-            else:
+            try:
+                result = subprocess.run(
+                    ["nmcli", "-t", "-f", "type,state,name", "connection", "show", "--active"],
+                    capture_output=True, text=True, timeout=1
+                )
+                connection = result.stdout.split('\n')[0] if result.stdout else ""
+                
+                if "802-11-wireless" in connection:
+                    PANEL_NETWORK.write_text(connection.split(':')[2] if ':' in connection else "WiFi")
+                elif "802-3-ethernet" in connection:
+                    PANEL_NETWORK.write_text("Wired")
+                else:
+                    PANEL_NETWORK.write_text("Disconnected")
+            except:
                 PANEL_NETWORK.write_text("Disconnected")
             
             update_network()

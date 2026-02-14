@@ -85,9 +85,16 @@ get_battery() {
     echo "$state ${capacity}%"
 }
 
-# Get date
+# Get date (format depends on state file)
 get_date() {
-    date "+%a %Y-%m-%d %H:%M"
+    local format_file="/tmp/panel_date_format"
+    local format=$(cat "$format_file" 2>/dev/null || echo "compact")
+    
+    if [ "$format" = "verbose" ]; then
+        date "+%A, %B %d, %Y %I:%M %p"
+    else
+        date "+%a %Y-%m-%d %H:%M"
+    fi
 }
 
 # Get VPN status
@@ -144,8 +151,11 @@ update_bar() {
     # Make volume clickable: left=mute toggle
     local volume_clickable="%{A:wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle:}${volume}%{A}"
     
+    # Make date clickable: left=toggle format, right=copy to clipboard
+    local datetime_clickable="%{A:sh -c 'if [ \$(cat /tmp/panel_date_format 2>/dev/null || echo compact) = compact ]; then echo verbose > /tmp/panel_date_format; else echo compact > /tmp/panel_date_format; fi':}%{A3:sh -c 'date \"+\%A, \%B \%d, \%Y \%I:\%M \%p\" | xclip -selection clipboard':}${datetime}%{A}%{A}"
+    
     # Right side - vpn, network, brightness, volume, date, battery
-    local right="${vpn_clickable}   ${network_clickable}   ${brightness}%   ${volume_clickable}   ${datetime}   ${battery}"
+    local right="${vpn_clickable}   ${network_clickable}   ${brightness}%   ${volume_clickable}   ${datetime_clickable}   ${battery}"
     
     echo "%{B$COLOR_BG}%{F$COLOR_FG}${left}%{r}${right} "
 }

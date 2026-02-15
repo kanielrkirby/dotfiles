@@ -212,12 +212,16 @@ def render_bar():
         
         network_click = '%{A:/home/mx/.config/bspwm/panel-toggle-wifi.sh:}%{A3:st -e nmtui:}' + state["network"] + '%{A}%{A}'
         
-        volume_click = f"%{{A:wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle:}}{state['volume']}%{{A}}"
+        # Brightness with scroll support (scroll up = +5%, scroll down = -5%)
+        brightness_click = f"%{{A4:brightnessctl set +5%:}}%{{A5:brightnessctl set 5%-:}}{state['brightness']}%%{{A}}%{{A}}"
+        
+        # Volume with click to mute + scroll support (scroll up = +5%, scroll down = -5%, capped at 120%)
+        volume_click = f"%{{A:wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle:}}%{{A4:wpctl set-volume -l 1.2 @DEFAULT_AUDIO_SINK@ 5%+:}}%{{A5:wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-:}}{state['volume']}%{{A}}%{{A}}%{{A}}"
         
         datetime_click = '%{A:/home/mx/.config/bspwm/panel-toggle-date.sh:}%{A3:/home/mx/.config/bspwm/panel-copy-date.sh:}' + state["datetime"] + '%{A}%{A}'
         
         left = f"%{{l}} {state['desktops']}"
-        right = f"{vpn_click}   {network_click}   {state['bluetooth']}   {state['brightness']}%   {volume_click}   {datetime_click}   {state['battery']}"
+        right = f"{vpn_click}   {network_click}   {state['bluetooth']}   {brightness_click}   {volume_click}   {datetime_click}   {state['battery']}"
         
         output = f"%{{B#1a1a1a}}%{{F#CCCCCC}}{left}%{{r}}{right} "
     

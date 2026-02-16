@@ -21,6 +21,7 @@ state = {
     'vpn': 'Unsecured',
     'network': 'Disconnected',
     'bluetooth': '',
+    'speedtest': '⊙',
 }
 
 # Lock for thread-safe updates
@@ -30,6 +31,7 @@ lock = threading.Lock()
 PANEL_DATE_FORMAT = Path('/tmp/panel_date_format')
 PANEL_VPN = Path('/tmp/panel_vpn')
 PANEL_NETWORK = Path('/tmp/panel_network')
+PANEL_SPEEDTEST = Path('/tmp/panel_speedtest')
 
 def run_cmd(cmd):
     """Run command and return output"""
@@ -199,10 +201,16 @@ def update_bluetooth():
     h_cmd = '/home/mx/.config/bspwm/panel-toggle-bt-headphones.sh'
     m_cmd = '/home/mx/.config/bspwm/panel-toggle-bt-mouse.sh'
     
-    bluetooth = f"%{{A:{h_cmd}:}}%{{F{h_color}}}[H]%{{F-}}%{{A}} %{{A:{m_cmd}:}}%{{F{m_color}}}[M]%{{F-}}%{{A}}"
+    bluetooth = f"%{{A:{h_cmd}:}}%{{A3:st -e bluetui:}}%{{F{h_color}}}[H]%{{F-}}%{{A}}%{{A}} %{{A:{m_cmd}:}}%{{A3:st -e bluetui:}}%{{F{m_color}}}[M]%{{F-}}%{{A}}%{{A}}"
     
     with lock:
         state['bluetooth'] = bluetooth
+
+def update_speedtest():
+    """Update speedtest state"""
+    speedtest = PANEL_SPEEDTEST.read_text().strip() if PANEL_SPEEDTEST.exists() else "⊙"
+    with lock:
+        state['speedtest'] = speedtest
 
 def render_bar():
     """Render the complete bar"""
@@ -212,16 +220,20 @@ def render_bar():
         
         network_click = '%{A:/home/mx/.config/bspwm/panel-toggle-wifi.sh:}%{A3:st -e nmtui:}' + state["network"] + '%{A}%{A}'
         
+        # Speedtest with click to trigger test
+        speedtest_color = "#444444" if state['speedtest'] == "⊙" else "#CCCCCC"
+        speedtest_click = f"%{{A:/home/mx/.config/bspwm/panel-run-speedtest.sh:}}%{{F{speedtest_color}}}[{state['speedtest']}]%{{F-}}%{{A}}"
+        
         # Brightness with scroll support (scroll up = +5%, scroll down = -5%)
         brightness_click = f"%{{A4:brightnessctl set +5%:}}%{{A5:brightnessctl set 5%-:}}{state['brightness']}%%{{A}}%{{A}}"
         
         # Volume with click to mute + scroll support (scroll up = +5%, scroll down = -5%, capped at 120%)
         volume_click = f"%{{A:wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle:}}%{{A4:wpctl set-volume -l 1.2 @DEFAULT_AUDIO_SINK@ 5%+:}}%{{A5:wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-:}}{state['volume']}%{{A}}%{{A}}%{{A}}"
         
-        datetime_click = '%{A:/home/mx/.config/bspwm/panel-toggle-date.sh:}%{A3:/home/mx/.config/bspwm/panel-copy-date.sh:}' + state["datetime"] + '%{A}%{A}'
+        datetime_click = '%{A:/home/mx/.config/bspwm/panel-toggle-date.sh:}%{A3:st -e sh -c "cal; read":}' + state["datetime"] + '%{A}%{A}'
         
         left = f"%{{l}} {state['desktops']}"
-        right = f"{vpn_click}   {network_click}   {state['bluetooth']}   {brightness_click}   {volume_click}   {datetime_click}   {state['battery']}"
+        right = f"{vpn_click}   {network_click}   {speedtest_click}   {state['bluetooth']}   {brightness_click}   {volume_click}   {datetime_click}   {state['battery']}"
         
         output = f"%{{B#1a1a1a}}%{{F#CCCCCC}}{left}%{{r}}{right} "
     
@@ -460,6 +472,24 @@ def watch_bluetooth():
                 update_bluetooth()
                 render_bar()
 
+def watch_speedtest():
+    """Watch speedtest state changes"""
+    if not PANEL_SPEEDTEST.exists():
+        PANEL_SPEEDTEST.write_text("⊙")
+    
+    update_speedtest()
+    
+    proc = subprocess.Popen(
+        ["inotifywait", "-m", "-q", "-e", "close_write", str(PANEL_SPEEDTEST)],
+        stdout=subprocess.PIPE,
+        text=True,
+        stderr=subprocess.DEVNULL
+    )
+    if proc.stdout:
+        for line in proc.stdout:
+            update_speedtest()
+            render_bar()
+
 if __name__ == "__main__":
     # Initialize all states
     update_desktops()
@@ -470,6 +500,7 @@ if __name__ == "__main__":
     update_vpn()
     update_network()
     update_bluetooth()
+    update_speedtest()
     
     # Render initial bar
     render_bar()
@@ -486,6 +517,7 @@ if __name__ == "__main__":
         threading.Thread(target=watch_vpn, daemon=True),
         threading.Thread(target=watch_network, daemon=True),
         threading.Thread(target=watch_bluetooth, daemon=True),
+        threading.Thread(target=watch_speedtest, daemon=True),
     ]
     
     for thread in threads:

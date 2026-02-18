@@ -16,6 +16,7 @@ state = {
     'desktops': '',
     'brightness': '',
     'volume': '',
+    'mic': '',
     'battery': '',
     'datetime': '',
     'vpn': 'Unsecured',
@@ -125,6 +126,25 @@ def update_volume():
     with lock:
         state['volume'] = volume
 
+def update_mic():
+    """Update mic mute state"""
+    try:
+        result = subprocess.run(
+            ["pactl", "get-source-mute", "@DEFAULT_SOURCE@"],
+            capture_output=True, text=True, timeout=0.5
+        )
+        mic_output = result.stdout.strip()
+        
+        if "yes" in mic_output:
+            mic = "X"
+        else:
+            mic = ""
+    except:
+        mic = ""
+    
+    with lock:
+        state['mic'] = mic
+
 def update_battery():
     """Update battery state"""
     bat_path = Path("/sys/class/power_supply/BAT0")
@@ -228,7 +248,9 @@ def render_bar():
         brightness_click = f"%{{A4:brightnessctl set +5%:}}%{{A5:brightnessctl set 5%-:}}{state['brightness']}%%{{A}}%{{A}}"
         
         # Volume with click to mute + scroll support (scroll up = +5%, scroll down = -5%, capped at 120%)
-        volume_click = f"%{{A:wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle:}}%{{A4:wpctl set-volume -l 1.2 @DEFAULT_AUDIO_SINK@ 5%+:}}%{{A5:wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-:}}{state['volume']}%{{A}}%{{A}}%{{A}}"
+        # Mic mute indicator appears right next to volume
+        mic_indicator = f" {state['mic']}" if state['mic'] else ""
+        volume_click = f"%{{A:wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle:}}%{{A4:wpctl set-volume -l 1.2 @DEFAULT_AUDIO_SINK@ 5%+:}}%{{A5:wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-:}}{state['volume']}{mic_indicator}%{{A}}%{{A}}%{{A}}"
         
         datetime_click = '%{A:/home/mx/.config/bspwm/panel-toggle-date.sh:}%{A3:st -e sh -c "cal; read":}' + state["datetime"] + '%{A}%{A}'
         
@@ -316,6 +338,21 @@ def watch_volume():
         for line in proc.stdout:
             if "volume" in line.lower() or "mute" in line.lower():
                 update_volume()
+                render_bar()
+
+def watch_mic():
+    """Watch mic mute changes via pw-mon"""
+    update_mic()
+    proc = subprocess.Popen(
+        ["pw-mon", "-N"],
+        stdout=subprocess.PIPE,
+        text=True,
+        stderr=subprocess.DEVNULL
+    )
+    if proc.stdout:
+        for line in proc.stdout:
+            if "mute" in line.lower():
+                update_mic()
                 render_bar()
 
 def watch_datetime():
@@ -495,6 +532,7 @@ if __name__ == "__main__":
     update_desktops()
     update_brightness()
     update_volume()
+    update_mic()
     update_battery()
     update_datetime()
     update_vpn()
@@ -510,6 +548,7 @@ if __name__ == "__main__":
         threading.Thread(target=watch_desktops, daemon=True),
         threading.Thread(target=watch_brightness, daemon=True),
         threading.Thread(target=watch_volume, daemon=True),
+        threading.Thread(target=watch_mic, daemon=True),
         threading.Thread(target=watch_battery, daemon=True),
         threading.Thread(target=watch_battery_percentage, daemon=True),
         threading.Thread(target=watch_datetime, daemon=True),

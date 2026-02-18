@@ -96,6 +96,9 @@ XF86AudioLowerVolume
 XF86AudioMute
 	wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle
 
+XF86AudioMicMute
+	pactl set-source-mute @DEFAULT_SOURCE@ toggle
+
 #
 # bspwm hotkeys
 #

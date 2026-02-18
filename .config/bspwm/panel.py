@@ -16,6 +16,7 @@ state = {
     'desktops': '',
     'brightness': '',
     'volume': '',
+    'volume_muted': '',
     'mic': '',
     'battery': '',
     'datetime': '',
@@ -103,6 +104,7 @@ def update_brightness():
 
 def update_volume():
     """Update volume state"""
+    volume_muted = ""
     try:
         result = subprocess.run(
             ["wpctl", "get-volume", "@DEFAULT_AUDIO_SINK@"],
@@ -115,7 +117,8 @@ def update_volume():
         elif "MUTED" in vol_output:
             vol = vol_output.split()[1]
             vol_percent = int(float(vol) * 100)
-            volume = f"M {vol_percent}%"
+            volume = f"{vol_percent}%"
+            volume_muted = "M"
         else:
             vol = vol_output.split()[1]
             vol_percent = int(float(vol) * 100)
@@ -125,6 +128,7 @@ def update_volume():
     
     with lock:
         state['volume'] = volume
+        state['volume_muted'] = volume_muted
 
 def update_mic():
     """Update mic mute state"""
@@ -248,9 +252,10 @@ def render_bar():
         brightness_click = f"%{{A4:brightnessctl set +5%:}}%{{A5:brightnessctl set 5%-:}}{state['brightness']}%%{{A}}%{{A}}"
         
         # Volume with click to mute + scroll support (scroll up = +5%, scroll down = -5%, capped at 120%)
-        # Mic mute indicator appears right next to volume
-        mic_indicator = f" {state['mic']}" if state['mic'] else ""
-        volume_click = f"%{{A:wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle:}}%{{A4:wpctl set-volume -l 1.2 @DEFAULT_AUDIO_SINK@ 5%+:}}%{{A5:wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-:}}{state['volume']}{mic_indicator}%{{A}}%{{A}}%{{A}}"
+        # Format: [X][M] percentage (X = mic muted, M = volume muted)
+        indicators = state['mic'] + state['volume_muted']
+        volume_display = f"{indicators} {state['volume']}" if indicators else state['volume']
+        volume_click = f"%{{A:wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle:}}%{{A4:wpctl set-volume -l 1.2 @DEFAULT_AUDIO_SINK@ 5%+:}}%{{A5:wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-:}}{volume_display}%{{A}}%{{A}}%{{A}}"
         
         datetime_click = '%{A:/home/mx/.config/bspwm/panel-toggle-date.sh:}%{A3:st -e sh -c "cal; read":}' + state["datetime"] + '%{A}%{A}'
         

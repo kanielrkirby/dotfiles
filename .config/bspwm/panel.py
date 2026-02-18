@@ -253,9 +253,10 @@ def render_bar():
         
         # Volume with click to mute + scroll support (scroll up = +5%, scroll down = -5%, capped at 120%)
         # Format: [X][M] percentage (X = mic muted, M = volume muted)
+        # Left click = toggle volume mute, Right click = toggle mic mute
         indicators = state['mic'] + state['volume_muted']
         volume_display = f"{indicators} {state['volume']}" if indicators else state['volume']
-        volume_click = f"%{{A:wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle:}}%{{A4:wpctl set-volume -l 1.2 @DEFAULT_AUDIO_SINK@ 5%+:}}%{{A5:wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-:}}{volume_display}%{{A}}%{{A}}%{{A}}"
+        volume_click = f"%{{A:wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle:}}%{{A3:pactl set-source-mute @DEFAULT_SOURCE@ toggle:}}%{{A4:wpctl set-volume -l 1.2 @DEFAULT_AUDIO_SINK@ 5%+:}}%{{A5:wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-:}}{volume_display}%{{A}}%{{A}}%{{A}}%{{A}}"
         
         datetime_click = '%{A:/home/mx/.config/bspwm/panel-toggle-date.sh:}%{A3:st -e sh -c "cal; read":}' + state["datetime"] + '%{A}%{A}'
         

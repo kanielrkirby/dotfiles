@@ -14,7 +14,7 @@ from pathlib import Path
 # Panel state - cached values
 state = {
     'desktops': '',
-    'set_indicator': '',
+    'workspace_indicator': '',
     'brightness': '',
     'volume': '',
     'volume_muted': '',
@@ -35,7 +35,7 @@ PANEL_DATE_FORMAT = Path('/tmp/panel_date_format')
 PANEL_VPN = Path('/tmp/panel_vpn')
 PANEL_NETWORK = Path('/tmp/panel_network')
 PANEL_SPEEDTEST = Path('/tmp/panel_speedtest')
-PANEL_SET = Path('/tmp/bspwm_current_set')
+PANEL_WORKSPACE = Path('/tmp/bspwm_current_workspace')
 
 def run_cmd(cmd):
     """Run command and return output"""
@@ -45,11 +45,11 @@ def run_cmd(cmd):
     except:
         return ""
 
-def get_current_set():
-    """Get current desktop set (1, 2, or 3)"""
+def get_current_workspace():
+    """Get current workspace (1, 2, or 3)"""
     try:
-        if PANEL_SET.exists():
-            return int(PANEL_SET.read_text().strip())
+        if PANEL_WORKSPACE.exists():
+            return int(PANEL_WORKSPACE.read_text().strip())
     except:
         pass
     return 1
@@ -65,9 +65,9 @@ def update_desktops():
         
         data = json.loads(result.stdout)
         
-        # Get current set to determine which desktops to show
-        current_set = get_current_set()
-        set_offset = (current_set - 1) * 9
+        # Get current workspace to determine which desktops to show
+        current_workspace = get_current_workspace()
+        workspace_offset = (current_workspace - 1) * 9
         
         # Parse JSON to get current and occupied desktops
         current_actual = ""
@@ -87,44 +87,44 @@ def update_desktops():
     except:
         current_actual = ""
         occupied_desktops = set()
-        current_set = 1
-        set_offset = 0
+        current_workspace = 1
+        workspace_offset = 0
     
     # Convert actual desktop to local desktop number (1-9)
     current_local = ""
     if current_actual:
         try:
             actual_num = int(current_actual)
-            if set_offset < actual_num <= set_offset + 9:
-                current_local = str(actual_num - set_offset)
+            if workspace_offset < actual_num <= workspace_offset + 9:
+                current_local = str(actual_num - workspace_offset)
         except:
             pass
     
-    # Build desktop display (only show desktops 1-9 for current set)
+    # Build desktop display (only show desktops 1-9 for current workspace)
     desktops = ""
     for i in range(1, 10):
-        actual_desktop = set_offset + i
+        actual_desktop = workspace_offset + i
         is_current = str(i) == current_local
         is_occupied = str(actual_desktop) in occupied_desktops
         
         if is_current:
             indicator = f"[{i}]"
-            desktops += f"%{{A:/home/mx/.config/bspwm/bspwm-set-helper.sh focus {i}:}}%{{F#FFFFFF}}{indicator}%{{F-}}%{{A}}"
+            desktops += f"%{{A:/home/mx/.config/bspwm/bspwm-workspace-helper.sh focus {i}:}}%{{F#FFFFFF}}{indicator}%{{F-}}%{{A}}"
         elif is_occupied:
             indicator = f" {i} "
-            desktops += f"%{{A:/home/mx/.config/bspwm/bspwm-set-helper.sh focus {i}:}}%{{F#888888}}{indicator}%{{F-}}%{{A}}"
+            desktops += f"%{{A:/home/mx/.config/bspwm/bspwm-workspace-helper.sh focus {i}:}}%{{F#888888}}{indicator}%{{F-}}%{{A}}"
         else:
             indicator = f" {i} "
-            desktops += f"%{{A:/home/mx/.config/bspwm/bspwm-set-helper.sh focus {i}:}}%{{F#444444}}{indicator}%{{F-}}%{{A}}"
+            desktops += f"%{{A:/home/mx/.config/bspwm/bspwm-workspace-helper.sh focus {i}:}}%{{F#444444}}{indicator}%{{F-}}%{{A}}"
     
-    # Set indicator (W/P/O for Work/Personal/Other) - clickable to cycle
-    set_names = {1: "W", 2: "P", 3: "O"}
-    set_label = set_names.get(current_set, '?')
-    set_indicator = f"%{{A:/home/mx/.config/bspwm/bspwm-set-helper.sh cycle:}}[{set_label}]%{{A}}"
+    # Workspace indicator (W/P/O for Work/Personal/Other) - clickable to cycle
+    workspace_names = {1: "W", 2: "P", 3: "O"}
+    workspace_label = workspace_names.get(current_workspace, '?')
+    workspace_indicator = f"%{{A:/home/mx/.config/bspwm/bspwm-workspace-helper.sh cycle:}}[{workspace_label}]%{{A}}"
     
     with lock:
         state['desktops'] = desktops
-        state['set_indicator'] = set_indicator
+        state['workspace_indicator'] = workspace_indicator
 
 def update_brightness():
     """Update brightness state"""
@@ -298,7 +298,7 @@ def render_bar():
         
         datetime_click = '%{A:/home/mx/.config/bspwm/panel-toggle-date.sh:}%{A3:st -e sh -c "cal; read":}' + state["datetime"] + '%{A}%{A}'
         
-        left = f"%{{l}} {state['desktops']} {state['set_indicator']}"
+        left = f"%{{l}} {state['desktops']} {state['workspace_indicator']}"
         right = f"{vpn_click}   {network_click}   {speedtest_click}   {state['bluetooth']}   {brightness_click}   {volume_click}   {datetime_click}   {state['battery']}"
         
         output = f"%{{B#1a1a1a}}%{{F#CCCCCC}}{left}%{{r}}{right} "
@@ -571,13 +571,13 @@ def watch_speedtest():
             update_speedtest()
             render_bar()
 
-def watch_set():
-    """Watch desktop set changes"""
-    if not PANEL_SET.exists():
-        PANEL_SET.write_text("1")
+def watch_workspace():
+    """Watch workspace changes"""
+    if not PANEL_WORKSPACE.exists():
+        PANEL_WORKSPACE.write_text("1")
     
     proc = subprocess.Popen(
-        ["inotifywait", "-m", "-q", "-e", "close_write,modify", str(PANEL_SET)],
+        ["inotifywait", "-m", "-q", "-e", "close_write,modify", str(PANEL_WORKSPACE)],
         stdout=subprocess.PIPE,
         text=True,
         stderr=subprocess.DEVNULL
@@ -617,7 +617,7 @@ if __name__ == "__main__":
         threading.Thread(target=watch_network, daemon=True),
         threading.Thread(target=watch_bluetooth, daemon=True),
         threading.Thread(target=watch_speedtest, daemon=True),
-        threading.Thread(target=watch_set, daemon=True),
+        threading.Thread(target=watch_workspace, daemon=True),
     ]
     
     for thread in threads:

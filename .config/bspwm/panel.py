@@ -14,6 +14,7 @@ from pathlib import Path
 # Panel state - cached values
 state = {
     'desktops': '',
+    'set_indicator': '',
     'brightness': '',
     'volume': '',
     'volume_muted': '',
@@ -34,6 +35,7 @@ PANEL_DATE_FORMAT = Path('/tmp/panel_date_format')
 PANEL_VPN = Path('/tmp/panel_vpn')
 PANEL_NETWORK = Path('/tmp/panel_network')
 PANEL_SPEEDTEST = Path('/tmp/panel_speedtest')
+PANEL_SET = Path('/tmp/bspwm_current_set')
 
 def run_cmd(cmd):
     """Run command and return output"""
@@ -42,6 +44,15 @@ def run_cmd(cmd):
         return result.stdout.strip()
     except:
         return ""
+
+def get_current_set():
+    """Get current desktop set (1, 2, or 3)"""
+    try:
+        if PANEL_SET.exists():
+            return int(PANEL_SET.read_text().strip())
+    except:
+        pass
+    return 1
 
 def update_desktops():
     """Update desktop state - single bspc call for maximum performance"""
@@ -54,8 +65,12 @@ def update_desktops():
         
         data = json.loads(result.stdout)
         
+        # Get current set to determine which desktops to show
+        current_set = get_current_set()
+        set_offset = (current_set - 1) * 9
+        
         # Parse JSON to get current and occupied desktops
-        current = ""
+        current_actual = ""
         occupied_desktops = set()
         
         focused_mon_id = data.get('focusedMonitorId')
@@ -68,25 +83,48 @@ def update_desktops():
                     occupied_desktops.add(name)
                 # Check if focused
                 if mon.get('id') == focused_mon_id and desk.get('id') == focused_desk_id:
-                    current = name
+                    current_actual = name
     except:
-        current = ""
+        current_actual = ""
         occupied_desktops = set()
+        current_set = 1
+        set_offset = 0
     
+    # Convert actual desktop to local desktop number (1-9)
+    current_local = ""
+    if current_actual:
+        try:
+            actual_num = int(current_actual)
+            if set_offset < actual_num <= set_offset + 9:
+                current_local = str(actual_num - set_offset)
+        except:
+            pass
+    
+    # Build desktop display (only show desktops 1-9 for current set)
     desktops = ""
     for i in range(1, 10):
-        if str(i) == current:
+        actual_desktop = set_offset + i
+        is_current = str(i) == current_local
+        is_occupied = str(actual_desktop) in occupied_desktops
+        
+        if is_current:
             indicator = f"[{i}]"
-            desktops += f"%{{A:bspc desktop -f ^{i}:}}%{{F#FFFFFF}}{indicator}%{{F-}}%{{A}}"
-        elif str(i) in occupied_desktops:
+            desktops += f"%{{A:/home/mx/.config/bspwm/bspwm-set-helper.sh focus {i}:}}%{{F#FFFFFF}}{indicator}%{{F-}}%{{A}}"
+        elif is_occupied:
             indicator = f" {i} "
-            desktops += f"%{{A:bspc desktop -f ^{i}:}}%{{F#888888}}{indicator}%{{F-}}%{{A}}"
+            desktops += f"%{{A:/home/mx/.config/bspwm/bspwm-set-helper.sh focus {i}:}}%{{F#888888}}{indicator}%{{F-}}%{{A}}"
         else:
             indicator = f" {i} "
-            desktops += f"%{{A:bspc desktop -f ^{i}:}}%{{F#444444}}{indicator}%{{F-}}%{{A}}"
+            desktops += f"%{{A:/home/mx/.config/bspwm/bspwm-set-helper.sh focus {i}:}}%{{F#444444}}{indicator}%{{F-}}%{{A}}"
+    
+    # Set indicator (W/P/O for Work/Personal/Other) - clickable to cycle
+    set_names = {1: "W", 2: "P", 3: "O"}
+    set_label = set_names.get(current_set, '?')
+    set_indicator = f"%{{A:/home/mx/.config/bspwm/bspwm-set-helper.sh cycle:}}[{set_label}]%{{A}}"
     
     with lock:
         state['desktops'] = desktops
+        state['set_indicator'] = set_indicator
 
 def update_brightness():
     """Update brightness state"""
@@ -260,7 +298,7 @@ def render_bar():
         
         datetime_click = '%{A:/home/mx/.config/bspwm/panel-toggle-date.sh:}%{A3:st -e sh -c "cal; read":}' + state["datetime"] + '%{A}%{A}'
         
-        left = f"%{{l}} {state['desktops']}"
+        left = f"%{{l}} {state['set_indicator']} {state['desktops']}"
         right = f"{vpn_click}   {network_click}   {speedtest_click}   {state['bluetooth']}   {brightness_click}   {volume_click}   {datetime_click}   {state['battery']}"
         
         output = f"%{{B#1a1a1a}}%{{F#CCCCCC}}{left}%{{r}}{right} "
@@ -533,6 +571,22 @@ def watch_speedtest():
             update_speedtest()
             render_bar()
 
+def watch_set():
+    """Watch desktop set changes"""
+    if not PANEL_SET.exists():
+        PANEL_SET.write_text("1")
+    
+    proc = subprocess.Popen(
+        ["inotifywait", "-m", "-q", "-e", "close_write,modify", str(PANEL_SET)],
+        stdout=subprocess.PIPE,
+        text=True,
+        stderr=subprocess.DEVNULL
+    )
+    if proc.stdout:
+        for line in proc.stdout:
+            update_desktops()
+            render_bar()
+
 if __name__ == "__main__":
     # Initialize all states
     update_desktops()
@@ -563,6 +617,7 @@ if __name__ == "__main__":
         threading.Thread(target=watch_network, daemon=True),
         threading.Thread(target=watch_bluetooth, daemon=True),
         threading.Thread(target=watch_speedtest, daemon=True),
+        threading.Thread(target=watch_set, daemon=True),
     ]
     
     for thread in threads:

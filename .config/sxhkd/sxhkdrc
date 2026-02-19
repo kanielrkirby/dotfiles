@@ -66,6 +66,27 @@ super + semicolon ; b ; d ; h
 super + semicolon ; b ; d ; m
 	sh -c 'notify-send -r 9003 "Bluetooth" "Disconnecting mouse..."; bluetoothctl disconnect D8:C8:63:41:63:DB >/dev/null 2>&1 && notify-send -r 9003 "Bluetooth" "Disconnected mouse" || notify-send -r 9003 "Bluetooth" "Failed to disconnect mouse"'
 
+# Desktop set switching
+super + semicolon ; 1
+	/home/mx/.config/bspwm/bspwm-set-helper.sh switch 1
+
+super + semicolon ; 2
+	/home/mx/.config/bspwm/bspwm-set-helper.sh switch 2
+
+super + semicolon ; 3
+	/home/mx/.config/bspwm/bspwm-set-helper.sh switch 3
+
+# Move window to specific desktop in specific set
+# super + shift + ; + <set> + <desktop>
+super + shift + semicolon ; 1 ; {1-9,0}
+	/home/mx/.config/bspwm/bspwm-set-helper.sh move-to-set 1 {1-9,10}
+
+super + shift + semicolon ; 2 ; {1-9,0}
+	/home/mx/.config/bspwm/bspwm-set-helper.sh move-to-set 2 {1-9,10}
+
+super + shift + semicolon ; 3 ; {1-9,0}
+	/home/mx/.config/bspwm/bspwm-set-helper.sh move-to-set 3 {1-9,10}
+
 # screenshots
 super + alt + 3
 	flameshot gui --clipboard
@@ -146,9 +167,9 @@ super + bracket{left,right}
 super + Tab
 	bspc desktop -f last
 
-# focus or send to the given desktop
+# focus or send to the given desktop (within current set)
 super + {_,shift + }{1-9,0}
-	bspc {desktop -f,node -d} '^{1-9,10}'
+	/home/mx/.config/bspwm/bspwm-set-helper.sh {focus,move} {1-9,10}
 
 #
 # preselect

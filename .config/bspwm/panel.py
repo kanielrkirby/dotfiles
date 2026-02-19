@@ -298,7 +298,7 @@ def render_bar():
         
         datetime_click = '%{A:/home/mx/.config/bspwm/panel-toggle-date.sh:}%{A3:st -e sh -c "cal; read":}' + state["datetime"] + '%{A}%{A}'
         
-        left = f"%{{l}} {state['set_indicator']} {state['desktops']}"
+        left = f"%{{l}} {state['desktops']} {state['set_indicator']}"
         right = f"{vpn_click}   {network_click}   {speedtest_click}   {state['bluetooth']}   {brightness_click}   {volume_click}   {datetime_click}   {state['battery']}"
         
         output = f"%{{B#1a1a1a}}%{{F#CCCCCC}}{left}%{{r}}{right} "

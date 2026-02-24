@@ -20,7 +20,7 @@ super + comma
 
 # ente auth menu
 super + period
-	entemenu
+	dmente
 
 # make sxhkd reload its configuration files:
 super + Escape

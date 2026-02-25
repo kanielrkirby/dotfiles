@@ -20,6 +20,9 @@ function nope() {
   ( set +m; bash -c "$*" >/dev/null 2>&1 </dev/null & )
 }
 
+# Gastown alias
+alias gt='nix run /home/mx/dev/wrk/gastown --no-write-lock-file --'
+
 [ "$TERM" = "linux" ] && printf '\e]P489b4fa'
 
 if command -v tmux &> /dev/null && command -v fzf &> /dev/null && [ -z "$TMUX" ] && [ -z "$SKIP_TMUX_START" ]; then

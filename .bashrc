@@ -20,9 +20,6 @@ function nope() {
   ( set +m; bash -c "$*" >/dev/null 2>&1 </dev/null & )
 }
 
-# Gastown alias
-alias gt='nix run /home/mx/dev/wrk/gastown --no-write-lock-file --'
-
 [ "$TERM" = "linux" ] && printf '\e]P489b4fa'
 
 if command -v tmux &> /dev/null && command -v fzf &> /dev/null && [ -z "$TMUX" ] && [ -z "$SKIP_TMUX_START" ]; then
@@ -32,3 +29,8 @@ if command -v tmux &> /dev/null && command -v fzf &> /dev/null && [ -z "$TMUX" ]
     [ -n "$choice" ] && exec tmux attach -t "$choice"
   fi
 fi
+
+# --- Gas Town Integration (managed by gt) ---
+export GASTOWN_DISABLE_OFFER_ADD=1
+[[ -f "/home/mx/.config/gastown/shell-hook.sh" ]] && source "/home/mx/.config/gastown/shell-hook.sh"
+# --- End Gas Town ---

@@ -39,7 +39,7 @@ Database connections are configured in `.opencode/plugins/database/config.json` 
   "defaultConnection": "local",
   "connections": {
     "local": "postgres://username:password@localhost:5432/database_name",
-    "atlas": "mongodb+srv://username:password@cluster.mongodb.net/database_name"
+    "some-srvr": "mongodb+srv://username:password@cluster.mongodb.net/database_name"
   }
 }
 ```

@@ -1,8 +1,18 @@
 #!/usr/bin/env bash
 
-# Clear any inherited TMUX environment variable to prevent new terminals from being "poisoned"
-unset TMUX
-unset TMUX_PANE
+# Wallpaper configuration
+# WALLPAPER_IMAGE="/path/to/image.jpg"
+WALLPAPER_TEXT="FOCUS"
+
+if [ -n "$WALLPAPER_IMAGE" ] && [ -f "$WALLPAPER_IMAGE" ]; then
+    feh --bg-scale "$WALLPAPER_IMAGE"
+elif [ -n "$WALLPAPER_TEXT" ]; then
+    convert -size 1920x1080 xc:'#1a1a1a' \
+        -font DejaVu-Sans-Bold -pointsize 120 -fill '#00ff00' \
+        -gravity center -annotate +0+0 "$WALLPAPER_TEXT" \
+        /tmp/wallpaper.png && \
+    feh --bg-scale /tmp/wallpaper.png
+fi
 
 # Configure monitors and desktops (27 desktops: 3 workspaces of 9)
 bspc monitor -d 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27

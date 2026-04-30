@@ -22,6 +22,8 @@ super + comma
 super + period
 	dmente
 
+
+
 # make sxhkd reload its configuration files:
 super + Escape
 	pkill -USR1 -x sxhkd
@@ -65,10 +67,6 @@ super + semicolon ; b ; d ; h
 # Bluetooth controls - disconnect mouse
 super + semicolon ; b ; d ; m
 	sh -c 'notify-send -r 9003 "Bluetooth" "Disconnecting mouse..."; bluetoothctl disconnect D8:C8:63:41:63:DB >/dev/null 2>&1 && notify-send -r 9003 "Bluetooth" "Disconnected mouse" || notify-send -r 9003 "Bluetooth" "Failed to disconnect mouse"'
-
-# Media controls
-super + semicolon ; p ; {h,l,k}
-	playerctl {previous,next,play-pause}
 
 # Cycle keyboard layout (US/Spanish)
 super + semicolon ; x

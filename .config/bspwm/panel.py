@@ -282,22 +282,6 @@ def update_player():
         if not status:
             player = ""
         else:
-            artist = run_cmd("playerctl metadata artist 2>/dev/null")
-            title = run_cmd("playerctl metadata title 2>/dev/null")
-
-            text = ""
-            if artist and title:
-                text = f"{artist} - {title}"
-            elif title:
-                text = title
-            elif artist:
-                text = artist
-
-            # Keep the bar from exploding on long titles
-            max_len = 15
-            if len(text) > max_len:
-                text = text[: max_len - 1] + "…"
-
             # Minimal state indicator + left click play/pause
             if status == "Playing":
                 icon = "▶"
@@ -309,11 +293,8 @@ def update_player():
                 icon = "■"
                 color = "#444444"
 
-            # If we have no metadata, still show a tiny control
-            if text:
-                label = f"[{icon} {text}]"
-            else:
-                label = f"[{icon}]"
+            # Hide metadata entirely; show only the control glyph
+            label = f"[{icon}]"
 
             player = f"%{{A:playerctl play-pause:}}%{{F{color}}}{label}%{{F-}}%{{A}}"
     except:

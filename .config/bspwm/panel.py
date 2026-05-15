@@ -303,10 +303,10 @@ def update_player():
                 icon = "▶"
                 color = "#CCCCCC"
             elif status == "Paused":
-                icon = "⏸"
+                icon = "‖"
                 color = "#888888"
             else:
-                icon = "⏹"
+                icon = "■"
                 color = "#444444"
 
             # If we have no metadata, still show a tiny control
@@ -346,12 +346,12 @@ def render_bar():
         
         datetime_click = '%{A:/home/mx/.config/bspwm/panel-toggle-date.sh:}%{A3:st -e sh -c "cal; read":}' + state["datetime"] + '%{A}%{A}'
 
+        left = f"%{{l}} {state['desktops']} {state['workspace_indicator']}"
+
+        # Player goes at the far-left of the right-hand side
         player_section = state['player']
         player_sep = "   " if player_section else ""
-
-        # Player goes far-left (before desktops)
-        left = f"%{{l}}{player_section}{player_sep}{state['desktops']} {state['workspace_indicator']}"
-        right = f"{vpn_click}   {network_click}   {speedtest_click}   {state['bluetooth']}   {brightness_click}   {volume_click}   {datetime_click}   {state['battery']}"
+        right = f"{player_section}{player_sep}{vpn_click}   {network_click}   {speedtest_click}   {state['bluetooth']}   {brightness_click}   {volume_click}   {datetime_click}   {state['battery']}"
         
         output = f"%{{B#1a1a1a}}%{{F#CCCCCC}}{left}%{{r}}{right} "
     

@@ -303,7 +303,7 @@ def update_player():
                 icon = "▶"
                 color = "#CCCCCC"
             elif status == "Paused":
-                icon = "‖"
+                icon = "▮▮"
                 color = "#888888"
             else:
                 icon = "■"

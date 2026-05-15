@@ -294,19 +294,19 @@ def update_player():
                 text = artist
 
             # Keep the bar from exploding on long titles
-            max_len = 45
+            max_len = 15
             if len(text) > max_len:
-                text = text[: max_len - 3] + "..."
+                text = text[: max_len - 1] + "…"
 
             # Minimal state indicator + left click play/pause
             if status == "Playing":
-                icon = ">"
+                icon = "▶"
                 color = "#CCCCCC"
             elif status == "Paused":
-                icon = "||"
+                icon = "⏸"
                 color = "#888888"
             else:
-                icon = ".."
+                icon = "⏹"
                 color = "#444444"
 
             # If we have no metadata, still show a tiny control
@@ -345,11 +345,13 @@ def render_bar():
         volume_click = f"%{{A:wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle:}}%{{A3:pactl set-source-mute @DEFAULT_SOURCE@ toggle:}}%{{A4:wpctl set-volume -l 1.2 @DEFAULT_AUDIO_SINK@ 5%+:}}%{{A5:wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-:}}{volume_display}%{{A}}%{{A}}%{{A}}%{{A}}"
         
         datetime_click = '%{A:/home/mx/.config/bspwm/panel-toggle-date.sh:}%{A3:st -e sh -c "cal; read":}' + state["datetime"] + '%{A}%{A}'
-        
-        left = f"%{{l}} {state['desktops']} {state['workspace_indicator']}"
+
         player_section = state['player']
         player_sep = "   " if player_section else ""
-        right = f"{vpn_click}   {network_click}{player_sep}{player_section}   {speedtest_click}   {state['bluetooth']}   {brightness_click}   {volume_click}   {datetime_click}   {state['battery']}"
+
+        # Player goes far-left (before desktops)
+        left = f"%{{l}}{player_section}{player_sep}{state['desktops']} {state['workspace_indicator']}"
+        right = f"{vpn_click}   {network_click}   {speedtest_click}   {state['bluetooth']}   {brightness_click}   {volume_click}   {datetime_click}   {state['battery']}"
         
         output = f"%{{B#1a1a1a}}%{{F#CCCCCC}}{left}%{{r}}{right} "
     

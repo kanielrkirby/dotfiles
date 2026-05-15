@@ -15,6 +15,7 @@ from pathlib import Path
 state = {
     'desktops': '',
     'workspace_indicator': '',
+    'player': '',
     'brightness': '',
     'volume': '',
     'volume_muted': '',
@@ -274,6 +275,53 @@ def update_speedtest():
     with lock:
         state['speedtest'] = speedtest
 
+def update_player():
+    """Update media player state via playerctl"""
+    try:
+        status = run_cmd("playerctl status 2>/dev/null")
+        if not status:
+            player = ""
+        else:
+            artist = run_cmd("playerctl metadata artist 2>/dev/null")
+            title = run_cmd("playerctl metadata title 2>/dev/null")
+
+            text = ""
+            if artist and title:
+                text = f"{artist} - {title}"
+            elif title:
+                text = title
+            elif artist:
+                text = artist
+
+            # Keep the bar from exploding on long titles
+            max_len = 45
+            if len(text) > max_len:
+                text = text[: max_len - 3] + "..."
+
+            # Minimal state indicator + left click play/pause
+            if status == "Playing":
+                icon = ">"
+                color = "#CCCCCC"
+            elif status == "Paused":
+                icon = "||"
+                color = "#888888"
+            else:
+                icon = ".."
+                color = "#444444"
+
+            # If we have no metadata, still show a tiny control
+            if text:
+                label = f"[{icon} {text}]"
+            else:
+                label = f"[{icon}]"
+
+            player = f"%{{A:playerctl play-pause:}}%{{F{color}}}{label}%{{F-}}%{{A}}"
+    except:
+        player = ""
+
+    with lock:
+        state['player'] = player
+
 def render_bar():
     """Render the complete bar"""
     with lock:
@@ -299,7 +347,9 @@ def render_bar():
         datetime_click = '%{A:/home/mx/.config/bspwm/panel-toggle-date.sh:}%{A3:st -e sh -c "cal; read":}' + state["datetime"] + '%{A}%{A}'
         
         left = f"%{{l}} {state['desktops']} {state['workspace_indicator']}"
-        right = f"{vpn_click}   {network_click}   {speedtest_click}   {state['bluetooth']}   {brightness_click}   {volume_click}   {datetime_click}   {state['battery']}"
+        player_section = state['player']
+        player_sep = "   " if player_section else ""
+        right = f"{vpn_click}   {network_click}{player_sep}{player_section}   {speedtest_click}   {state['bluetooth']}   {brightness_click}   {volume_click}   {datetime_click}   {state['battery']}"
         
         output = f"%{{B#1a1a1a}}%{{F#CCCCCC}}{left}%{{r}}{right} "
     
@@ -571,6 +621,18 @@ def watch_speedtest():
             update_speedtest()
             render_bar()
 
+def watch_player():
+    """Poll playerctl for metadata changes"""
+    last = None
+    while True:
+        update_player()
+        with lock:
+            current = state['player']
+        if current != last:
+            last = current
+            render_bar()
+        time.sleep(2)
+
 def watch_workspace():
     """Watch workspace changes"""
     if not PANEL_WORKSPACE.exists():
@@ -599,6 +661,7 @@ if __name__ == "__main__":
     update_network()
     update_bluetooth()
     update_speedtest()
+    update_player()
     
     # Render initial bar
     render_bar()
@@ -617,6 +680,7 @@ if __name__ == "__main__":
         threading.Thread(target=watch_network, daemon=True),
         threading.Thread(target=watch_bluetooth, daemon=True),
         threading.Thread(target=watch_speedtest, daemon=True),
+        threading.Thread(target=watch_player, daemon=True),
         threading.Thread(target=watch_workspace, daemon=True),
     ]
     

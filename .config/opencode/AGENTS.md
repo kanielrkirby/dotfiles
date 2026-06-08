@@ -39,6 +39,10 @@ This skill provides detailed instructions on how to:
 - Read individual files using `curl` with `raw.githubusercontent.com`
 - Avoid common mistakes when working with remote repositories
 
+## Quay / Nix Flakes
+
+When a task is about Nix flakes, dev shells, flake-backed commands, or repo-local sync manifests like `.quay.toml`, load the `quay` skill and prefer using the `quay` CLI from `~/dev/lab/quay` rather than inventing a new workflow.
+
 ## Database Operations
 
 The database plugin provides tools for interacting with databases. Database credentials are stored locally and should NEVER be committed to Git.

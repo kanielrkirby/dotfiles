@@ -1,5 +1,18 @@
 # Agent Guidelines for OpenCode Configuration
 
+## Helpdesk Tickets
+
+When provided with a ticket number (e.g., #123) or information about a "ticket", load the `helpdesk` skill.
+
+```
+skill({ name: "helpdesk" })
+```
+
+This skill provides:
+- The standard workflow for solving Helpdesk Tickets.
+- Useful tips for using the `agent-browser` MCP.
+- Sources for useful context and information related to the current project or ticket.
+
 ## Git Operations
 
 When working with Git, load the `git` skill to ensure you're using modern, safe commands:

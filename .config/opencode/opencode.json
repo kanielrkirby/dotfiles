@@ -16,6 +16,13 @@
       ],
       "enabled": true
     },
+    "odoo": {
+      "type": "local",
+      "command": [
+        "/home/mx/.config/opencode/odoo-wrapper.sh"
+      ],
+      "enabled": true
+    },
     "firecrawl": {
       "type": "local",
       "command": [

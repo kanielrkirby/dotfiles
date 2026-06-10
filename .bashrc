@@ -24,13 +24,12 @@ function nope() {
 
 if command -v tmux &> /dev/null && command -v fzf &> /dev/null && [ -z "$TMUX" ] && [ -z "$SKIP_TMUX_START" ]; then
   if ! ([ "$XDG_VTNR" = 1 ] && [ -z "$DISPLAY" ] && [ -z "$WAYLAND_DISPLAY" ]); then
-    mapfile -t picker < <({ tmux ls -F "#{session_name}" 2>/dev/null; echo "(New)"; } | fzf --height=40% --reverse --print-query)
-    query="${picker[0]}"
-    choice="${picker[1]}"
-    if [ "$choice" = "(New)" ] || [ -z "$choice" ]; then
-      [ -n "$query" ] && exec tmux new-session -A -s "$query" || exec tmux
+    picker=$({ tmux ls -F "#{session_name}" 2>/dev/null; echo "(New)"; } | fzf --height=40% --reverse --bind 'enter:accept-or-print-query')
+    [ $? -ne 0 ] && return
+    if [ "$picker" = "(New)" ]; then
+      exec tmux
     else
-      exec tmux attach -t "$choice"
+      exec tmux new-session -A -s "$picker"
     fi
   fi
 fi

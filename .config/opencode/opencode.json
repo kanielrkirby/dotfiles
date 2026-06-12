@@ -16,6 +16,18 @@
       ],
       "enabled": true
     },
+    "graphiti": {
+      "type": "remote",
+      "url": "http://localhost:14045/mcp/",
+      "enabled": true,
+      "timeout": 60000
+    },
+    "mem0": {
+      "type": "remote",
+      "url": "http://localhost:15708/mcp/opencode/sse/mx",
+      "enabled": true,
+      "timeout": 60000
+    },
     "odoo": {
       "type": "local",
       "command": [

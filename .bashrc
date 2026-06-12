@@ -24,13 +24,19 @@ function nope() {
 
 if command -v tmux &> /dev/null && command -v fzf &> /dev/null && [ -z "$TMUX" ] && [ -z "$SKIP_TMUX_START" ]; then
   if ! ([ "$XDG_VTNR" = 1 ] && [ -z "$DISPLAY" ] && [ -z "$WAYLAND_DISPLAY" ]); then
-    picker=$({ tmux ls -F "#{session_name}" 2>/dev/null; echo "(New)"; } | fzf --height=40% --reverse --bind 'enter:accept-or-print-query')
-    [ $? -ne 0 ] && return
-    if [ "$picker" = "(New)" ]; then
-      exec tmux
-    else
-      exec tmux new-session -A -s "$picker"
+    query_file=$(mktemp)
+    create_file=$(mktemp)
+    choice=$({ tmux ls -F "#{session_name}" 2>/dev/null; echo "(New)"; } | fzf --height=40% --reverse --bind "change:execute-silent(printf %s {q} > '$query_file')" --bind "ctrl-o:execute-silent(printf 1 > '$create_file')+abort")
+    status=$?
+    if [ -s "$create_file" ]; then
+      query=$(<"$query_file")
+      rm -f "$query_file" "$create_file"
+      [ -n "$query" ] && exec tmux new-session -A -s "$query" || exec tmux
     fi
+    rm -f "$query_file" "$create_file"
+    [ $status -ne 0 ] && return
+    [ "$choice" = "(New)" ] && exec tmux
+    [ -n "$choice" ] && exec tmux attach -t "$choice"
   fi
 fi
 

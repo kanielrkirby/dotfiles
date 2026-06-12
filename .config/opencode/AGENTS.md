@@ -79,3 +79,211 @@ This keeps your database credentials local and prevents accidental commits.
 ### Config Search
 
 The plugin searches recursively upward from the current directory to the git worktree root, aggregating all found configs. Closer configs override settings from parent directories.
+
+---
+
+## Knowledge Policy
+
+### Source Responsibilities
+
+| Source           | Purpose                                             |
+| ---------------- | --------------------------------------------------- |
+| Mem0             | User preferences, habits, standards, workflow rules |
+| Graphiti         | Durable project knowledge and relationships         |
+| Filesystem / Git | Current implementation truth                        |
+| Model Knowledge  | Last resort only                                    |
+
+---
+
+### Mem0
+
+Mem0 stores **how the user prefers to work**.
+
+Query Mem0 before:
+
+* Writing code
+* Refactoring
+* Architecture/design decisions
+* Tool selection
+* Documentation
+* Commit messages
+* PR descriptions
+* Planning
+* Any task involving style, tradeoffs, or judgment
+
+Retrieve:
+
+* coding preferences
+* architecture preferences
+* workflow preferences
+* tool preferences
+* communication preferences
+
+Use Mem0 for:
+
+* coding style
+* type safety preferences
+* testing preferences
+* documentation style
+* workflow constraints
+* recurring user dislikes
+* cross-project operating rules
+
+**DO NOT** use Mem0 for:
+
+* project facts
+* architecture facts
+* repo structure
+* implementation details
+* tickets
+* issues
+* dependency graphs
+* temporary task state
+
+Store memories only when a preference is durable and likely to matter again.
+
+---
+
+### Graphiti
+
+Graphiti is the default source of truth for durable project knowledge.
+
+Always:
+
+* Query Graphiti before making claims about architecture, dependencies, decisions, ownership, timelines, risks, migrations, or cross-document relationships.
+* Prefer Graphiti over manually searching files for project-structure questions.
+* Ingest high-signal sources only.
+* Before any Graphiti query, if the group is not already known, run Neo4j directly to discover distinct `group_id` values, then query the relevant Graphiti group(s) instead of assuming `main` or a default scope.
+* Use this command to discover groups when needed:
+
+  ```bash
+  docker exec graphiti-neo4j-1 cypher-shell --non-interactive --format plain -u neo4j -p demodemo -d neo4j "MATCH (n) WHERE n.group_id IS NOT NULL RETURN DISTINCT n.group_id AS group_id ORDER BY group_id;"
+  ```
+* If the local Graphiti stack or Neo4j container is unavailable, say so and ask the user for the group ID.
+
+Use Graphiti for:
+
+* architecture
+* dependencies
+* ownership
+* decisions
+* ADRs
+* migrations
+* timelines
+* project history
+* risk analysis
+* cross-document relationships
+
+**DO NOT**:
+
+* dump entire repositories
+* ingest generated files
+* ingest build artifacts
+* ingest large logs
+* invent project structure not supported by Graphiti or source files
+* create extra namespaces, routing schemes, or group IDs unless explicitly requested
+
+When Graphiti lacks information, say so.
+
+Do not guess.
+
+---
+
+### Filesystem & Git
+
+Filesystem and Git are the source of truth for implementation details.
+
+Use them for:
+
+* code behavior
+* repository structure
+* current APIs
+* tests
+* configuration
+* recent changes
+* commit history
+
+For implementation questions:
+
+1. Check files/Git.
+2. Use Graphiti only for surrounding context.
+
+---
+
+### Query Rules
+
+#### Preference Question
+
+Examples:
+
+* How should this be structured?
+* Which approach should we use?
+* How should I document this?
+
+→ Query Mem0.
+
+#### Project Knowledge Question
+
+Examples:
+
+* Why does this exist?
+* What depends on this?
+* What changed?
+* What are the risks?
+
+→ Query Graphiti.
+
+#### Implementation Question
+
+Examples:
+
+* Where is this implemented?
+* How does this function work?
+* Which file owns this logic?
+
+→ Query Filesystem/Git.
+
+#### Mixed Question
+
+Examples:
+
+* Design a solution for this project.
+* Plan a migration.
+* Write a PR.
+
+→ Query Mem0 and Graphiti.
+→ Verify implementation details in files.
+
+---
+
+### Conflict Resolution
+
+Priority:
+
+1. Current user instruction
+2. Filesystem / Git
+3. Graphiti
+4. Mem0
+5. Model knowledge
+
+User instructions always override memory.
+
+Project facts override preferences.
+
+Never invent missing information.
+
+State uncertainty explicitly.
+
+---
+
+### Non-Negotiables
+
+**DO NOT** treat Mem0 as a project database.
+
+**DO NOT** treat Graphiti as personal memory.
+
+**DO NOT** answer architecture questions without consulting Graphiti when available.
+
+**DO NOT** answer preference-heavy questions without consulting Mem0 when available.
+
+**DO NOT** guess when authoritative sources exist.

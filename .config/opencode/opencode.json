@@ -49,6 +49,11 @@
       ],
       "enabled": false,
       "timeout": 600000
+    },
+    "linear": {
+      "type": "remote",
+      "url": "https://mcp.linear.app/mcp",
+      "oauth": {}
     }
   },
   "mode": {

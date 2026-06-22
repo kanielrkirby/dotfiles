@@ -26,6 +26,19 @@ This skill provides:
 - Safety rules for branch operations, unstaging, and force pushing
 - Quick reference table of old vs new commands
 
+## Pull Requests for `odoo-env` Repos
+
+When drafting, rewriting, or reviewing PR bodies for repositories under `~/dev/wrk/odoo-env/`, load the `pr` skill:
+
+```
+skill({ name: "pr" })
+```
+
+This skill provides:
+- The user's actual PR body structure for Odoo/helpdesk work.
+- Exact section patterns like `Helpdesk Tickets`, nested screenshot blocks, and `Post-Merge Steps`.
+- Guidance on when to use lighter one-line ticket bodies versus full change-set PR descriptions.
+
 ## Working with Remote GitHub Repositories
 
 When you need to explore or read files from remote GitHub repositories without cloning them, load the `github-explore` skill:

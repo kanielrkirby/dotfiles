@@ -1,0 +1,166 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  // ============================================================================
+  // BASE PERMISSIONS (from documentation - commented out for reference)
+  // ============================================================================
+  // "permission": {
+  //   "read": "allow",           - reading files
+  //   "edit": "allow",           - all file modifications (edit, write, patch, multiedit)
+  //   "glob": "allow",           - file globbing
+  //   "grep": "allow",           - content search
+  //   "list": "allow",           - listing files in a directory
+  //   "bash": "allow",           - running shell commands
+  //   "task": "allow",           - launching subagents
+  //   "skill": "allow",          - loading a skill
+  //   "lsp": "allow",            - running LSP queries
+  //   "todoread": "allow",       - reading the todo list
+  //   "todowrite": "allow",      - updating the todo list
+  //   "webfetch": "allow",       - fetching a URL
+  //   "websearch": "allow",      - web search
+  //   "codesearch": "allow",     - code search
+  //   "external_directory": "ask", - accessing paths outside project
+  //   "doom_loop": "ask"         - repeated identical tool calls
+  // },
+  // ============================================================================
+  // MCP Servers
+  "mcp": {
+    "trello": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "@delorenj/mcp-server-trello"
+      ],
+      "environment": {
+        "TRELLO_API_KEY": "YOUR_API_KEY_HERE",
+        "TRELLO_TOKEN": "YOUR_TOKEN_HERE"
+      }
+    },
+    "freshbooks": {
+      "type": "local",
+      "command": [
+        "node",
+        "/home/mx/.opencode/freshbooks-mcp-server/dist/index.js"
+      ],
+      "environment": {
+        "FRESHBOOKS_CLIENT_ID": "YOUR_CLIENT_ID_HERE",
+        "FRESHBOOKS_CLIENT_SECRET": "YOUR_CLIENT_SECRET_HERE"
+      }
+    },
+    "browser": {
+      "type": "local",
+      "command": [
+        "node",
+        "/home/mx/.opencode/agent-browser-mcp-patched/dist/index.js"
+      ],
+      "environment": {
+        "AUTO_CONNECT": "true",
+        "CDP_PORT": "9222"
+      }
+    }
+  },
+  // Top-level permissions: disallow mutational git and gh commands
+  "permission": {
+    "external_directory": "allow",
+    // Allow the question tool globally
+    "question": "allow",
+    // Deny reading database config files (contain passwords)
+    "read": {
+      "*": "allow",
+      "**/.opencode/plugins/database/config.json": "deny",
+      "**/plugins/database/config.json": "deny"
+    },
+    // Git commands - only allow non-mutational operations
+    "bash": {
+      "*": "allow",
+      // Git - allow read-only operations
+      "git status*": "allow",
+      "git diff*": "allow",
+      "git log*": "allow",
+      "git reflog*": "allow",
+      "git show*": "allow",
+      "git branch*": "allow",
+      "git remote*": "allow",
+      // Git - ask for mutational operations
+      "git add*": "ask",
+      "git commit*": "ask",
+      "git push*": "ask",
+      "git push --force": "deny",
+      "git push -f": "deny",
+      "git pull*": "ask",
+      "git fetch*": "ask",
+      "git merge*": "ask",
+      "git rebase*": "ask",
+      "git reset*": "ask",
+      "git checkout*": "ask",
+      "git switch*": "allow",
+      "git stash*": "ask",
+      "git tag*": "ask",
+      "git cherry-pick*": "ask",
+      "git revert*": "ask",
+      // GH CLI - ask for all operations
+      "gh *": "ask"
+    }
+  },
+  // Agent configurations
+  "agent": {
+    "commit": {
+      "description": "Creates Git conventional commits with user approval",
+      "mode": "subagent",
+      "permission": {
+        // Allow question tool
+        "question": "allow",
+        // Git operations needed for commits
+        "bash": {
+          "*": "deny",
+          "git status*": "allow",
+          "git diff*": "allow",
+          "git log*": "allow",
+          "git branch*": "allow",
+          "git show*": "allow",
+          "git add*": "allow",
+          "git commit*": "allow",
+          "git reset --soft*": "allow",
+          "git grep*": "allow"
+        },
+        // No PR or GH operations
+        "edit": "deny",
+        "write": "deny"
+      }
+    },
+    "pr": {
+      "description": "Creates GitHub pull requests with user approval",
+      "mode": "subagent",
+      "permission": {
+        // Allow question tool
+        "question": "allow",
+        // Git operations needed for PRs
+        "bash": {
+          "*": "deny",
+          "git status*": "allow",
+          "git diff*": "allow",
+          "git log*": "allow",
+          "git branch*": "allow",
+          "git show*": "allow",
+          "git switch*": "allow",
+          "git push*": "allow",
+          // GH CLI for creating/editing PRs
+          "gh pr create*": "allow",
+          "gh pr edit*": "allow",
+          "gh pr view*": "allow",
+          "gh pr list*": "allow"
+        },
+        // No code editing during PR creation
+        "edit": "deny",
+        "write": "deny"
+      }
+    },
+    "yolo": {
+      "description": "Unrestricted agent - use with caution",
+      "mode": "primary",
+      "permission": {
+        "*": "allow"
+      }
+    }
+  }
+}

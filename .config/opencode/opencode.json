@@ -12,20 +12,6 @@
     }
   },
   "mcp": {
-    "kb": {
-      "type": "local",
-      "command": [
-        "/home/mx/.config/opencode/kb-wrapper.sh"
-      ],
-      "enabled": true
-    },
-    "db": {
-      "type": "local",
-      "command": [
-        "/home/mx/.config/opencode/db-wrapper.sh"
-      ],
-      "enabled": true
-    },
     "graphiti": {
       "type": "remote",
       "url": "http://localhost:14045/mcp/",
@@ -45,37 +31,11 @@
       ],
       "enabled": true
     },
-    "firecrawl": {
-      "type": "local",
-      "command": [
-        "docker",
-        "run",
-        "--rm",
-        "-i",
-        "--add-host=host.docker.internal:host-gateway",
-        "-e",
-        "FIRECRAWL_API_URL=http://host.docker.internal:3915",
-        "firecrawl-mcp-server"
-      ],
-      "enabled": false,
-      "timeout": 600000
+    "linear": {
+      "type": "remote",
+      "url": "https://mcp.linear.app/mcp",
+      "enabled": true,
+      "timeout": 60000
     }
-  },
-  "mode": {
-    /* "build": {
-      "prompt": "You are Claude Code, Anthropic's official CLI for Claude."
-    },
-    "plan": {
-      "prompt": "You are Claude Code, Anthropic's official CLI for Claude."
-    },
-    "yolo": {
-      "prompt": "You are Claude Code, Anthropic's official CLI for Claude."
-    },
-    "pr": {
-      "prompt": "You are Claude Code, Anthropic's official CLI for Claude."
-    },
-    "commit": {
-      "prompt": "You are Claude Code, Anthropic's official CLI for Claude."
-    } */
   }
 }

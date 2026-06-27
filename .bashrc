@@ -1,6 +1,6 @@
 export PATH="$PATH:$HOME/.local/bin"
 export PATH="/home/mx/.bun/bin:$PATH"
-export EDITOR="vi"
+export EDITOR="hx"
 export HISTSIZE="1000000"
 export NIXPKGS_ALLOW_UNFREE=1
 

@@ -58,44 +58,17 @@ When a task is about Nix flakes, dev shells, flake-backed commands, or repo-loca
 
 ## Database Operations
 
-The database plugin provides tools for interacting with databases. Database credentials are stored locally and should NEVER be committed to Git.
+`usql` can be run using `nix run nixpkgs#usql`. There are named database connections that you'll have access to, and can query using `nix run nixpkgs#usql -Xc '\cset' | awk -F ' = ' '{print $1}'`. Do NOT read directly, it MUST pass through the `awk`.
 
-### Configuration
+Then you can use it by writing to `/tmp/{some-name}.sql` and running `nix run nixpkgs#usql <CONNECTION NAME> -f /tmp/<FILE> -o /tmp/<OUTPUT FILE>`. Output files are useful for limiting context.
 
-Database connections are configured in `.opencode/plugins/database/config.json` with this format:
+## System
 
-```json
-{
-  "defaultConnection": "local",
-  "connections": {
-    "local": "postgres://username:password@localhost:5432/database_name",
-    "some-srvr": "mongodb+srv://username:password@cluster.mongodb.net/database_name"
-  }
-}
-```
-
-**IMPORTANT:** Always add this path to `.git/info/exclude` (NOT `.gitignore`):
-
-```bash
-echo ".opencode/plugins/database/config.json" >> .git/info/exclude
-```
-
-This keeps your database credentials local and prevents accidental commits.
-
-### Available Tools
-
-- `database_execute` - Execute SQL queries
-- `database_list` - List available database connections
-- `database_table` - Show detailed table schema
-- `database_info` - Get overview of all tables
-
-### Config Search
-
-The plugin searches recursively upward from the current directory to the git worktree root, aggregating all found configs. Closer configs override settings from parent directories.
+You are running on NixOS. That means that common or expected packages may not exist, but almost ALWAYS exist in `nixpkgs`. Prefer running through flake syntax, i.e., `nix shell nixpkgs#something`, NOT `nix-shell -p something`.
 
 ---
 
-## Knowledge Policy
+## Knowledge Policy (CURRENTLY INACTIVE, DO NOT USE AT ALL)
 
 ### Source Responsibilities
 

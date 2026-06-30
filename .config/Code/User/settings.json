@@ -3,16 +3,13 @@
   "editor.codeActionsOnSave": {
     "source.organizeImports": "explicit"
   },
-
   "eslint.useFlatConfig": true,
   "eslint.nodePath": "/home/mx/.local/share/eslint-global/node_modules",
-
   "basedpyright.analysis.typeCheckingMode": "basic",
-
   "[nix]": {
     "editor.defaultFormatter": "jnoortheen.nix-ide"
   },
   "nix.formatterPath": "alejandra",
-
-  "sqlfluff.dialect": "postgres"
+  "sqlfluff.dialect": "postgres",
+  "svelte.enable-ts-plugin": true
 }

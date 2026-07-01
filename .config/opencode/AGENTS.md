@@ -58,9 +58,9 @@ When a task is about Nix flakes, dev shells, flake-backed commands, or repo-loca
 
 ## Database Operations
 
-`usql` can be run using `nix run nixpkgs#usql`. There are named database connections that you'll have access to, and can query using `nix run nixpkgs#usql -Xc '\cset' | awk -F ' = ' '{print $1}'`. Do NOT read directly, it MUST pass through the `awk`.
+`usql` can be run. There are named database connections that you'll have access to, and can query using `usql -Xc '\cset' | awk -F ' = ' '{print $1}'`. Do NOT read directly, it MUST pass through the `awk`.
 
-Then you can use it by writing to `/tmp/{some-name}.sql` and running `nix run nixpkgs#usql <CONNECTION NAME> -f /tmp/<FILE> -o /tmp/<OUTPUT FILE>`. Output files are useful for limiting context.
+Then you can use it by writing to `/tmp/{some-name}.sql` and running `usql <CONNECTION NAME> -f /tmp/<FILE> -o /tmp/<OUTPUT FILE>`. Output files are useful for limiting context.
 
 ## System
 

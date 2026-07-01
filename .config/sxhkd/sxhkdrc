@@ -98,7 +98,7 @@ super + alt + 3
 	flameshot gui --clipboard
 
 super + alt + 4
-	flameshot gui --path ~/Pictures --accept-on-select --delay 200
+	flameshot gui --path ~/Pictures
 
 # brightness control
 XF86MonBrightnessUp

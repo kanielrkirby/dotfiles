@@ -1,0 +1,17 @@
+{
+  "defaultConnection": "dome",
+  "connections": {
+    "dome": {
+      "url": "https://portal.dome.software",
+      "db": "domeodoo-deploy-dome-inc-prod-32104255",
+      "username": "kaniel.kirby@dome.software",
+      "api_key": "7a7cd9747dccf9b3eeca70afd1519789076864ab",
+      "transport": "json2",
+      "json2_database_header": 1,
+      "env": {
+        "ODOO_MCP_ALLOWED_SIDE_EFFECT_METHODS": "mail.message.read_group",
+        "ODOO_MCP_ENABLE_WRITES": "1"
+      }
+    }
+  }
+}

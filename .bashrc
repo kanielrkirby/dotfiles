@@ -1,7 +1,7 @@
 export PATH="$PATH:$HOME/.local/bin"
 export PATH="/home/mx/.bun/bin:$PATH"
 export EDITOR="hx"
-export HISTSIZE="1000000"
+export HISTSIZE="10000000"
 export NIXPKGS_ALLOW_UNFREE=1
 
 shopt -s globstar

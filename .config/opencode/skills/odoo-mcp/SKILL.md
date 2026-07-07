@@ -1,11 +1,11 @@
 ---
 name: odoo-mcp
-description: Odoo MCP Knowledge.article read/write examples. Use when reading or editing Knowledge documents through Odoo MCP tools, especially `knowledge.article` records.
+description: Odoo MCP Knowledge.article read/write examples. Use when interacting with the Dome Software portal.
 ---
 
 # Odoo MCP
 
-Use this skill for Odoo Knowledge documents exposed through Odoo MCP.
+Use this skill for Odoo Knowledge documents exposed through Odoo MCP. Do not use `curl`, `agent-browser`, `WebFetch`, etc., unless **EXPLICITLY TOLD OTHERWISE**.
 
 ## Read Knowledge
 

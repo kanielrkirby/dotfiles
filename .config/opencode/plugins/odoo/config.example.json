@@ -1,0 +1,13 @@
+{
+  "defaultConnection": "dome",
+  "connections": {
+    "dome": {
+      "url": "https://portal.dome.software",
+      "db": "your-database",
+      "username": "your-username",
+      "api_key": "your-api-key",
+      "transport": "json2",
+      "json2_database_header": 1
+    }
+  }
+}

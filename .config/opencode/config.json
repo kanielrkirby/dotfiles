@@ -73,7 +73,6 @@
     // Git commands - only allow non-mutational operations
     "bash": {
       "*": "allow",
-      // Git - allow read-only operations
       "git status*": "allow",
       "git diff*": "allow",
       "git log*": "allow",
@@ -81,7 +80,6 @@
       "git show*": "allow",
       "git branch*": "allow",
       "git remote*": "allow",
-      // Git - ask for mutational operations
       "git add*": "ask",
       "git commit*": "ask",
       "git push*": "ask",
@@ -98,63 +96,15 @@
       "git tag*": "ask",
       "git cherry-pick*": "ask",
       "git revert*": "ask",
-      // GH CLI - ask for all operations
-      "gh *": "ask"
+      "gh *": "ask",
+      "gh pr list*": "ask",
+      "gh pr view*": "ask",
+      "gh pr diff*": "ask",
+      "gh pr status*": "ask"
     }
   },
   // Agent configurations
   "agent": {
-    "commit": {
-      "description": "Creates Git conventional commits with user approval",
-      "mode": "subagent",
-      "permission": {
-        // Allow question tool
-        "question": "allow",
-        // Git operations needed for commits
-        "bash": {
-          "*": "deny",
-          "git status*": "allow",
-          "git diff*": "allow",
-          "git log*": "allow",
-          "git branch*": "allow",
-          "git show*": "allow",
-          "git add*": "allow",
-          "git commit*": "allow",
-          "git reset --soft*": "allow",
-          "git grep*": "allow"
-        },
-        // No PR or GH operations
-        "edit": "deny",
-        "write": "deny"
-      }
-    },
-    "pr": {
-      "description": "Creates GitHub pull requests with user approval",
-      "mode": "subagent",
-      "permission": {
-        // Allow question tool
-        "question": "allow",
-        // Git operations needed for PRs
-        "bash": {
-          "*": "deny",
-          "git status*": "allow",
-          "git diff*": "allow",
-          "git log*": "allow",
-          "git branch*": "allow",
-          "git show*": "allow",
-          "git switch*": "allow",
-          "git push*": "allow",
-          // GH CLI for creating/editing PRs
-          "gh pr create*": "allow",
-          "gh pr edit*": "allow",
-          "gh pr view*": "allow",
-          "gh pr list*": "allow"
-        },
-        // No code editing during PR creation
-        "edit": "deny",
-        "write": "deny"
-      }
-    },
     "yolo": {
       "description": "Unrestricted agent - use with caution",
       "mode": "primary",

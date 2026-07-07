@@ -1,8 +1,13 @@
 export PATH="$PATH:$HOME/.local/bin"
 export PATH="/home/mx/.bun/bin:$PATH"
 export EDITOR="hx"
-export HISTSIZE="10000000"
 export NIXPKGS_ALLOW_UNFREE=1
+
+shopt -s histappend
+export HISTSIZE="1000000"
+export HISTFILESIZE="10000000"
+export HISTCONTROL=ignoredups:erasedups
+export PROMPT_COMMAND='history -a; history -n'
 
 shopt -s globstar
 shopt -s huponexit

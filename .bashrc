@@ -8,6 +8,7 @@ export HISTSIZE="1000000"
 export HISTFILESIZE="10000000"
 export HISTCONTROL=ignoredups:erasedups
 export PROMPT_COMMAND='history -a; history -n'
+source "$HOME/.cache/keys.sh"
 
 shopt -s globstar
 shopt -s huponexit

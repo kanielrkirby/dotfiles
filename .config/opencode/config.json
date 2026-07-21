@@ -25,6 +25,7 @@
   // MCP Servers
   "mcp": {
     "trello": {
+      "enabled": false,
       "type": "local",
       "command": [
         "npx",
@@ -37,6 +38,7 @@
       }
     },
     "freshbooks": {
+      "enabled": false,
       "type": "local",
       "command": [
         "node",
@@ -48,6 +50,7 @@
       }
     },
     "browser": {
+      "enabled": false,
       "type": "local",
       "command": [
         "node",
@@ -61,9 +64,7 @@
   },
   // Top-level permissions: disallow mutational git and gh commands
   "permission": {
-    "external_directory": "allow",
-    // Allow the question tool globally
-    "question": "allow",
+    "*": "allow",
     // Deny reading database config files (contain passwords)
     "read": {
       "*": "allow",
@@ -73,6 +74,7 @@
     // Git commands - only allow non-mutational operations
     "bash": {
       "*": "allow",
+      "git*": "ask",
       "git status*": "allow",
       "git diff*": "allow",
       "git log*": "allow",
@@ -80,37 +82,15 @@
       "git show*": "allow",
       "git branch*": "allow",
       "git remote*": "allow",
-      "git add*": "ask",
-      "git commit*": "ask",
-      "git push*": "ask",
       "git push --force": "deny",
       "git push -f": "deny",
-      "git pull*": "ask",
-      "git fetch*": "ask",
-      "git merge*": "ask",
-      "git rebase*": "ask",
-      "git reset*": "ask",
-      "git checkout*": "ask",
-      "git switch*": "allow",
-      "git stash*": "ask",
-      "git tag*": "ask",
-      "git cherry-pick*": "ask",
-      "git revert*": "ask",
       "gh *": "ask",
-      "gh pr list*": "ask",
-      "gh pr view*": "ask",
-      "gh pr diff*": "ask",
-      "gh pr status*": "ask"
+      "gh pr list*": "allow",
+      "gh pr view*": "allow",
+      "gh pr diff*": "allow",
+      "gh pr status*": "allow"
     }
   },
   // Agent configurations
-  "agent": {
-    "yolo": {
-      "description": "Unrestricted agent - use with caution",
-      "mode": "primary",
-      "permission": {
-        "*": "allow"
-      }
-    }
-  }
+  "agent": {}
 }

@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+: "${ZIPLINE_TOKEN:?set ZIPLINE_TOKEN}"
+HOST="${ZIPLINE_HOST:-https://zip.gum.cx}"
+
+shot="$(mktemp --suffix=.png)"
+trap 'rm -f "$shot"' EXIT
+
+flameshot gui -r >"$shot"
+
+curl -sS -H "Content-Type: multipart/form-data" -H "authorization: $ZIPLINE_TOKEN" \
+  -F "file=@$shot" "$HOST/api/upload" \
+  | jq -r '.files[0].url' \
+  | xclip -selection clipboard

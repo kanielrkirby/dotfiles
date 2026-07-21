@@ -1,11 +1,12 @@
 ---
 name: odoo-mcp
-description: Odoo MCP Knowledge.article read/write examples. Use when interacting with the Dome Software portal.
+description: ONLY for Dome Software Portal / Helpdesk.
 ---
 
-# Odoo MCP
+## Use Restrictions (MUST FOLLOW)
 
-Use this skill for Odoo Knowledge documents exposed through Odoo MCP. Do not use `curl`, `agent-browser`, `WebFetch`, etc., unless **EXPLICITLY TOLD OTHERWISE**.
+- ***NEVER*** use for any project that is not Dome Software Portal (production). ***NO*** localhost, ***NO*** WWT, ***NO*** Turner Seed, etc. None of those are configured. ONLY Dome Software's Portal.
+- ***NEVER*** use `curl`, `agent-browser`, `WebFetch`, or otherwise to query information from Dome Software Portal. Use this MCP.
 
 ## Read Knowledge
 

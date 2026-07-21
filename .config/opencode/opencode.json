@@ -1,8 +1,7 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "plugin": [
-    "opencode-with-claude",
-    "@dietrichgebert/ponytail"
+    "opencode-with-claude"
   ],
   "provider": {
     "anthropic": {
@@ -10,6 +9,19 @@
         "baseURL": "http://127.0.0.1:9152",
         "apiKey": "dummy"
       }
+    }
+  },
+  "default_agent": "simple",
+  "permission": {
+    "read": {
+      "~/.aws/**": "deny",
+      "/home/mx/.aws/**": "deny",
+      "~/.ssh/**": "deny",
+      "/home/mx/.ssh/**": "deny"
+    },
+    "edit": {
+      "~/.config/opencode/**": "ask",
+      "/home/mx/.config/opencode/**": "ask"
     }
   },
   "mcp": {

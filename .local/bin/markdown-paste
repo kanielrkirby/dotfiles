@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+copyq eval - <<'COPYQ'
+var md = clipboard();
+
+var result = execute(
+    'pandoc',
+    '-f', 'markdown',
+    '-t', 'html',
+    null,
+    md
+);
+
+if (!result || result.exit_code != 0)
+    abort();
+
+copy(
+    'text/plain', md,
+    'text/html', result.stdout
+);
+
+paste();
+COPYQ

@@ -51,3 +51,6 @@ fi
 export GASTOWN_DISABLE_OFFER_ADD=1
 [[ -f "/home/mx/.config/gastown/shell-hook.sh" ]] && source "/home/mx/.config/gastown/shell-hook.sh"
 # --- End Gas Town ---
+
+# opencode
+export PATH=/home/mx/.opencode/bin:$PATH

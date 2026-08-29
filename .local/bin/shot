@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Private Zipline settings. Keep this file out of version control and chmod 600.
+# Expected contents: export ZIPLINE_TOKEN='...'
+# Optional: export ZIPLINE_HOST='https://your-zipline-host'
+source "$HOME/.config/zipline/env"
 : "${ZIPLINE_TOKEN:?set ZIPLINE_TOKEN}"
 HOST="${ZIPLINE_HOST:-https://zip.gum.cx}"
 

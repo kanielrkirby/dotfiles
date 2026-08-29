@@ -4,7 +4,7 @@
 
 # terminal emulator
 super + shift + Return
-	alacritty
+	wezterm
 
 # program launcher
 super + p
@@ -31,50 +31,6 @@ super + period
 # make sxhkd reload its configuration files:
 super + Escape
 	pkill -USR1 -x sxhkd
-
-#
-# Modal bindings for system control
-#
-
-# Mullvad VPN controls
-super + semicolon ; m ; s
-	notify-send -r 9001 "Mullvad" "$(mullvad status)"
-
-super + semicolon ; m ; r
-	sh -c 'notify-send -r 9001 "Mullvad" "Reconnecting..."; mullvad reconnect --wait && notify-send -r 9001 "Mullvad" "Reconnected"'
-
-super + semicolon ; m ; d
-	sh -c 'notify-send -r 9001 "Mullvad" "Disconnecting..."; mullvad disconnect --wait && notify-send -r 9001 "Mullvad" "Disconnected"'
-
-super + semicolon ; m ; c
-	sh -c 'notify-send -r 9001 "Mullvad" "Connecting..."; mullvad connect --wait && notify-send -r 9001 "Mullvad" "Connected"'
-
-# WiFi controls
-super + semicolon ; w ; c
-	sh -c "notify-send -r 9002 'WiFi' 'Connecting...'; nmcli radio wifi on; nmcli --wait 30 connection up 'K&Z' && notify-send -r 9002 'WiFi' 'Connected to K&Z' || notify-send -r 9002 'WiFi' 'Failed to connect'"
-
-super + semicolon ; w ; d
-	sh -c 'notify-send -r 9002 "WiFi" "Turning off..."; nmcli radio wifi off && notify-send -r 9002 "WiFi" "Turned off"'
-
-# Bluetooth controls - connect headphones
-super + semicolon ; b ; c ; h
-	sh -c 'notify-send -r 9003 "Bluetooth" "Connecting to headphones..."; bluetoothctl connect 80:C3:BA:53:50:59 >/dev/null 2>&1 && notify-send -r 9003 "Bluetooth" "Connected to headphones" || notify-send -r 9003 "Bluetooth" "Failed to connect headphones"'
-
-# Bluetooth controls - connect mouse
-super + semicolon ; b ; c ; m
-	sh -c 'notify-send -r 9003 "Bluetooth" "Connecting to mouse..."; bluetoothctl connect D8:C8:63:41:63:DB >/dev/null 2>&1 && notify-send -r 9003 "Bluetooth" "Connected to mouse" || notify-send -r 9003 "Bluetooth" "Failed to connect mouse"'
-
-# Bluetooth controls - disconnect headphones
-super + semicolon ; b ; d ; h
-	sh -c 'notify-send -r 9003 "Bluetooth" "Disconnecting headphones..."; bluetoothctl disconnect 80:C3:BA:53:50:59 >/dev/null 2>&1 && notify-send -r 9003 "Bluetooth" "Disconnected headphones" || notify-send -r 9003 "Bluetooth" "Failed to disconnect headphones"'
-
-# Bluetooth controls - disconnect mouse
-super + semicolon ; b ; d ; m
-	sh -c 'notify-send -r 9003 "Bluetooth" "Disconnecting mouse..."; bluetoothctl disconnect D8:C8:63:41:63:DB >/dev/null 2>&1 && notify-send -r 9003 "Bluetooth" "Disconnected mouse" || notify-send -r 9003 "Bluetooth" "Failed to disconnect mouse"'
-
-# Cycle keyboard layout (US/Spanish)
-super + semicolon ; x
-	sh -c 'current=$(setxkbmap -query | grep layout | cut -d: -f2 | tr -d " "); case "$current" in us,*|us) setxkbmap -layout es,us && notify-send -r 9004 "Keyboard" "Spanish layout" ;; *) setxkbmap -layout us,es && notify-send -r 9004 "Keyboard" "US layout" ;; esac'
 
 # Workspace switching
 super + semicolon ; 1
@@ -103,6 +59,9 @@ super + alt + 3
 
 super + alt + 4
 	flameshot gui --path ~/Pictures
+
+super + alt + 5
+	shot
 
 # brightness control
 XF86MonBrightnessUp

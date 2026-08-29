@@ -1,0 +1,2 @@
+#!/bin/sh
+printf 'SETDESC %s\nGETPIN\n' "${1:-sudo password}" | pinentry-dmenu | sed -n 's/^D //p' | head -n1

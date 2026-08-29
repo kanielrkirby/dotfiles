@@ -7,10 +7,8 @@ bspc monitor -d 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 2
 pgrep -x sxhkd > /dev/null || sxhkd &
 
 # Start lemonbar panel (after bspwm is configured)
-pkill -9 -f "panel.py"
-pkill -9 -f "lemonbar"
-sleep 1
-export PATH="/run/current-system/sw/bin:$PATH"
+pkill -f "/home/mx/.config/bspwm/panel.py" 2>/dev/null || true
+pkill -x lemonbar 2>/dev/null || true
 /home/mx/.config/bspwm/panel.py 2>/dev/null | lemonbar -n "panel" -a 32 -g x22 -B "#1a1a1a" -F "#CCCCCC" -f "DejaVu Sans Mono:size=10" | bash &
 
 # Hide/show bar on fullscreen
@@ -42,5 +40,12 @@ bspc rule -a mplayer2 state=floating
 bspc rule -a Screenkey manage=off
 
 # Start flameshot
-pkill -9 -f "flameshot"
+pkill -x flameshot 2>/dev/null || true
 flameshot &
+
+# Notifications
+dunst &
+
+# Background
+pkill -x feh 2>/dev/null || true
+find ~/Documents/wallpapers -type f -print0 | shuf -z -n 1 | xargs -0 -r feh --bg-fill

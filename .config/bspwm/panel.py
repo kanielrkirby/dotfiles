@@ -1,678 +1,83 @@
 #!/usr/bin/env -S nix run nixpkgs#python312 --
-import subprocess
-import sys
-import threading
-import time
-import os
-import signal
-import fcntl
-import json
+import json, selectors, subprocess, time
 from pathlib import Path
+S=selectors.DefaultSelector(); D={}; DIR=Path('/tmp'); datef=DIR/'panel_date_format'; vpnf=DIR/'panel_vpn'; netf=DIR/'panel_network'; workf=DIR/'bspwm_current_workspace'; tsf=DIR/'panel_tailscale'
 
-# No automatic cleanup - bspwmrc handles it
+def cmd(*x, timeout=1):
+ try: return subprocess.run(x,capture_output=True,text=True,timeout=timeout).stdout.strip()
+ except (OSError,subprocess.SubprocessError): return ''
+def watch(*x, data=None):
+ try:
+  p=subprocess.Popen(x,stdout=subprocess.PIPE,text=True,bufsize=1); S.register(p.stdout,selectors.EVENT_READ,data or x[0])
+ except OSError: pass
+def val(p,default):
+ try: return p.read_text().strip() or default
+ except OSError: return default
 
-# Panel state - cached values
-state = {
-    'desktops': '',
-    'workspace_indicator': '',
-    'player': '',
-    'brightness': '',
-    'volume': '',
-    'volume_muted': '',
-    'mic': '',
-    'battery': '',
-    'datetime': '',
-    'vpn': 'Unsecured',
-    'network': 'Disconnected',
-    'bluetooth': '',
-    'speedtest': '⊙',
-}
-
-# Lock for thread-safe updates
-lock = threading.Lock()
-
-# Temp files for communication
-PANEL_DATE_FORMAT = Path('/tmp/panel_date_format')
-PANEL_VPN = Path('/tmp/panel_vpn')
-PANEL_NETWORK = Path('/tmp/panel_network')
-PANEL_SPEEDTEST = Path('/tmp/panel_speedtest')
-PANEL_WORKSPACE = Path('/tmp/bspwm_current_workspace')
-
-def run_cmd(cmd):
-    """Run command and return output"""
-    try:
-        result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=1)
-        return result.stdout.strip()
-    except:
-        return ""
-
-def get_current_workspace():
-    """Get current workspace (1, 2, or 3)"""
-    try:
-        if PANEL_WORKSPACE.exists():
-            return int(PANEL_WORKSPACE.read_text().strip())
-    except:
-        pass
-    return 1
-
-def update_desktops():
-    """Update desktop state - single bspc call for maximum performance"""
-    try:
-        # Use bspc wm -d JSON dump - ONE call instead of two separate queries
-        result = subprocess.run(
-            ["bspc", "wm", "-d"],
-            capture_output=True, text=True, timeout=0.5
-        )
-        
-        data = json.loads(result.stdout)
-        
-        # Get current workspace to determine which desktops to show
-        current_workspace = get_current_workspace()
-        workspace_offset = (current_workspace - 1) * 9
-        
-        # Parse JSON to get current and occupied desktops
-        current_actual = ""
-        occupied_desktops = set()
-        
-        focused_mon_id = data.get('focusedMonitorId')
-        for mon in data.get('monitors', []):
-            focused_desk_id = mon.get('focusedDesktopId')
-            for desk in mon.get('desktops', []):
-                name = desk.get('name', '')
-                # Check if occupied (has windows)
-                if desk.get('root'):
-                    occupied_desktops.add(name)
-                # Check if focused
-                if mon.get('id') == focused_mon_id and desk.get('id') == focused_desk_id:
-                    current_actual = name
-    except:
-        current_actual = ""
-        occupied_desktops = set()
-        current_workspace = 1
-        workspace_offset = 0
-    
-    # Convert actual desktop to local desktop number (1-9)
-    current_local = ""
-    if current_actual:
-        try:
-            actual_num = int(current_actual)
-            if workspace_offset < actual_num <= workspace_offset + 9:
-                current_local = str(actual_num - workspace_offset)
-        except:
-            pass
-    
-    # Build desktop display (only show desktops 1-9 for current workspace)
-    desktops = ""
-    for i in range(1, 10):
-        actual_desktop = workspace_offset + i
-        is_current = str(i) == current_local
-        is_occupied = str(actual_desktop) in occupied_desktops
-        
-        if is_current:
-            indicator = f"[{i}]"
-            desktops += f"%{{A:/home/mx/.config/bspwm/bspwm-workspace-helper.sh focus {i}:}}%{{F#FFFFFF}}{indicator}%{{F-}}%{{A}}"
-        elif is_occupied:
-            indicator = f" {i} "
-            desktops += f"%{{A:/home/mx/.config/bspwm/bspwm-workspace-helper.sh focus {i}:}}%{{F#888888}}{indicator}%{{F-}}%{{A}}"
-        else:
-            indicator = f" {i} "
-            desktops += f"%{{A:/home/mx/.config/bspwm/bspwm-workspace-helper.sh focus {i}:}}%{{F#444444}}{indicator}%{{F-}}%{{A}}"
-    
-    # Workspace indicator (W/P/O for Work/Personal/Other) - clickable to cycle
-    workspace_names = {1: "W", 2: "P", 3: "O"}
-    workspace_label = workspace_names.get(current_workspace, '?')
-    workspace_indicator = f"%{{A:/home/mx/.config/bspwm/bspwm-workspace-helper.sh cycle:}}[{workspace_label}]%{{A}}"
-    
-    with lock:
-        state['desktops'] = desktops
-        state['workspace_indicator'] = workspace_indicator
-
-def update_brightness():
-    """Update brightness state"""
-    try:
-        result = subprocess.run(
-            ["brightnessctl", "-m"],
-            capture_output=True, text=True, timeout=0.5
-        )
-        # Parse machine-readable format: device,class,curr,max,percent
-        brightness = result.stdout.split(',')[3].replace('%', '') if result.stdout else ""
-    except:
-        brightness = ""
-    with lock:
-        state['brightness'] = brightness
-
-def update_volume():
-    """Update volume state"""
-    volume_muted = ""
-    try:
-        result = subprocess.run(
-            ["wpctl", "get-volume", "@DEFAULT_AUDIO_SINK@"],
-            capture_output=True, text=True, timeout=0.5
-        )
-        vol_output = result.stdout.strip()
-        
-        if not vol_output:
-            volume = "N/A"
-        elif "MUTED" in vol_output:
-            vol = vol_output.split()[1]
-            vol_percent = int(float(vol) * 100)
-            volume = f"{vol_percent}%"
-            volume_muted = "M"
-        else:
-            vol = vol_output.split()[1]
-            vol_percent = int(float(vol) * 100)
-            volume = f"{vol_percent}%"
-    except:
-        volume = "N/A"
-    
-    with lock:
-        state['volume'] = volume
-        state['volume_muted'] = volume_muted
-
-def update_mic():
-    """Update mic mute state"""
-    try:
-        result = subprocess.run(
-            ["pactl", "get-source-mute", "@DEFAULT_SOURCE@"],
-            capture_output=True, text=True, timeout=0.5
-        )
-        mic_output = result.stdout.strip()
-        
-        if "yes" in mic_output:
-            mic = "X"
-        else:
-            mic = ""
-    except:
-        mic = ""
-    
-    with lock:
-        state['mic'] = mic
-
-def update_battery():
-    """Update battery state"""
-    bat_path = Path("/sys/class/power_supply/BAT0")
-    if not bat_path.exists():
-        battery = "N/A"
-    else:
-        capacity = (bat_path / "capacity").read_text().strip()
-        status = (bat_path / "status").read_text().strip()
-        battery_state = "C" if status == "Charging" else "D"
-        battery = f"{battery_state} {capacity}%"
-    
-    with lock:
-        state['battery'] = battery
-
-def update_datetime():
-    """Update date/time state"""
-    date_format = PANEL_DATE_FORMAT.read_text().strip() if PANEL_DATE_FORMAT.exists() else "compact"
-    
-    try:
-        if date_format == "verbose":
-            result = subprocess.run(
-                ["date", "+%A, %B %d, %Y %I:%M %p"],
-                capture_output=True, text=True, timeout=0.5
-            )
-        else:
-            result = subprocess.run(
-                ["date", "+%a %Y-%m-%d %H:%M"],
-                capture_output=True, text=True, timeout=0.5
-            )
-        datetime = result.stdout.strip()
-    except:
-        datetime = ""
-    
-    with lock:
-        state['datetime'] = datetime
-
-def update_vpn():
-    """Update VPN state"""
-    vpn = PANEL_VPN.read_text().strip() if PANEL_VPN.exists() else "Unsecured"
-    with lock:
-        state['vpn'] = vpn
-
-def update_network():
-    """Update network state"""
-    network = PANEL_NETWORK.read_text().strip() if PANEL_NETWORK.exists() else "Disconnected"
-    with lock:
-        state['network'] = network
-
-def update_bluetooth():
-    """Update Bluetooth state"""
-    try:
-        # Check headphones (MOMENTUM TW 4)
-        h_result = subprocess.run(
-            ["bluetoothctl", "info", "80:C3:BA:53:50:59"],
-            capture_output=True, text=True, timeout=0.5
-        )
-        h_connected = "Connected: yes" in h_result.stdout
-        
-        # Check mouse (MX Master 3S)
-        m_result = subprocess.run(
-            ["bluetoothctl", "info", "D8:C8:63:41:63:DB"],
-            capture_output=True, text=True, timeout=0.5
-        )
-        m_connected = "Connected: yes" in m_result.stdout
-    except:
-        h_connected = False
-        m_connected = False
-    
-    # Build clickable bluetooth indicators with desktop-style shading
-    h_color = "#FFFFFF" if h_connected else "#444444"
-    m_color = "#FFFFFF" if m_connected else "#444444"
-    
-    # Inline bluetooth toggle commands
-    h_cmd = '/home/mx/.config/bspwm/panel-toggle-bt-headphones.sh'
-    m_cmd = '/home/mx/.config/bspwm/panel-toggle-bt-mouse.sh'
-    
-    bluetooth = f"%{{A:{h_cmd}:}}%{{A3:st -e bluetui:}}%{{F{h_color}}}[H]%{{F-}}%{{A}}%{{A}} %{{A:{m_cmd}:}}%{{A3:st -e bluetui:}}%{{F{m_color}}}[M]%{{F-}}%{{A}}%{{A}}"
-    
-    with lock:
-        state['bluetooth'] = bluetooth
-
-def update_speedtest():
-    """Update speedtest state"""
-    speedtest = PANEL_SPEEDTEST.read_text().strip() if PANEL_SPEEDTEST.exists() else "⊙"
-    with lock:
-        state['speedtest'] = speedtest
-
-def update_player():
-    """Update media player state via playerctl"""
-    try:
-        status = run_cmd("playerctl status 2>/dev/null")
-        if not status:
-            player = ""
-        else:
-            # Minimal state indicator + left click play/pause
-            if status == "Playing":
-                icon = "▶"
-                color = "#CCCCCC"
-            elif status == "Paused":
-                icon = "▮▮"
-                color = "#888888"
-            else:
-                icon = "■"
-                color = "#444444"
-
-            # Hide metadata entirely; show only the control glyph
-            label = f"[{icon}]"
-
-            player = f"%{{A:playerctl play-pause:}}%{{F{color}}}{label}%{{F-}}%{{A}}"
-    except:
-        player = ""
-
-    with lock:
-        state['player'] = player
-
-def render_bar():
-    """Render the complete bar"""
-    with lock:
-        # Build clickable elements
-        vpn_click = '%{A:/home/mx/.config/bspwm/panel-toggle-vpn.sh:}%{A3:mullvad reconnect:}' + state['vpn'] + '%{A}%{A}'
-        
-        network_click = '%{A:/home/mx/.config/bspwm/panel-toggle-wifi.sh:}%{A3:st -e nmtui:}' + state["network"] + '%{A}%{A}'
-        
-        # Speedtest with click to trigger test
-        speedtest_color = "#444444" if state['speedtest'] == "⊙" else "#CCCCCC"
-        speedtest_click = f"%{{A:/home/mx/.config/bspwm/panel-run-speedtest.sh:}}%{{F{speedtest_color}}}[{state['speedtest']}]%{{F-}}%{{A}}"
-        
-        # Brightness with scroll support (scroll up = +5%, scroll down = -5%)
-        brightness_click = f"%{{A4:brightnessctl set +5%:}}%{{A5:brightnessctl set 5%-:}}{state['brightness']}%%{{A}}%{{A}}"
-        
-        # Volume with click to mute + scroll support (scroll up = +5%, scroll down = -5%, capped at 120%)
-        # Format: [X][M] percentage (X = mic muted, M = volume muted)
-        # Left click = toggle volume mute, Right click = toggle mic mute
-        indicators = state['mic'] + state['volume_muted']
-        volume_display = f"{indicators} {state['volume']}" if indicators else state['volume']
-        volume_click = f"%{{A:wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle:}}%{{A3:pactl set-source-mute @DEFAULT_SOURCE@ toggle:}}%{{A4:wpctl set-volume -l 1.2 @DEFAULT_AUDIO_SINK@ 5%+:}}%{{A5:wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-:}}{volume_display}%{{A}}%{{A}}%{{A}}%{{A}}"
-        
-        datetime_click = '%{A:/home/mx/.config/bspwm/panel-toggle-date.sh:}%{A3:st -e sh -c "cal; read":}' + state["datetime"] + '%{A}%{A}'
-
-        left = f"%{{l}} {state['desktops']} {state['workspace_indicator']}"
-
-        # Player goes at the far-left of the right-hand side
-        player_section = state['player']
-        player_sep = "   " if player_section else ""
-        right = f"{player_section}{player_sep}{vpn_click}   {network_click}   {speedtest_click}   {state['bluetooth']}   {brightness_click}   {volume_click}   {datetime_click}   {state['battery']}"
-        
-        output = f"%{{B#1a1a1a}}%{{F#CCCCCC}}{left}%{{r}}{right} "
-    
-    print(output, flush=True)
-
-# Event watchers (each runs in its own thread)
-
-def watch_desktops():
-    """Watch desktop changes and node transfers"""
-    update_desktops()
-    
-    proc = subprocess.Popen(
-        ["bspc", "subscribe", "desktop_focus", "node_transfer"],
-        stdout=subprocess.PIPE,
-        text=True,
-        bufsize=0  # Completely unbuffered
-    )
-    
-    if proc.stdout:
-        for line in proc.stdout:
-            update_desktops()
-            render_bar()
-
-def watch_brightness():
-    """Watch brightness changes"""
-    update_brightness()
-    proc = subprocess.Popen(
-        ["udevadm", "monitor", "--kernel", "--subsystem-match=backlight"],
-        stdout=subprocess.PIPE,
-        text=True,
-        stderr=subprocess.DEVNULL
-    )
-    if proc.stdout:
-        for line in proc.stdout:
-            if "KERNEL[" in line:
-                update_brightness()
-                render_bar()
-
-def watch_battery():
-    """Watch battery status changes (charging/discharging) via udev"""
-    update_battery()
-    proc = subprocess.Popen(
-        ["udevadm", "monitor", "--kernel", "--subsystem-match=power_supply"],
-        stdout=subprocess.PIPE,
-        text=True,
-        stderr=subprocess.DEVNULL
-    )
-    if proc.stdout:
-        for line in proc.stdout:
-            if "power_supply" in line:
-                # Small delay to let sysfs update after event
-                time.sleep(0.1)
-                update_battery()
-                render_bar()
-
-def watch_battery_percentage():
-    """Poll battery percentage (sysfs doesn't trigger inotify)"""
-    last_capacity = ""
-    while True:
-        time.sleep(10)  # Poll every 10 seconds
-        try:
-            current_capacity = Path("/sys/class/power_supply/BAT0/capacity").read_text().strip()
-            if current_capacity != last_capacity:
-                last_capacity = current_capacity
-                update_battery()
-                render_bar()
-        except:
-            pass
-
-def watch_volume():
-    """Watch volume changes via pw-mon"""
-    update_volume()
-    proc = subprocess.Popen(
-        ["pw-mon", "-N"],
-        stdout=subprocess.PIPE,
-        text=True,
-        stderr=subprocess.DEVNULL
-    )
-    if proc.stdout:
-        for line in proc.stdout:
-            if "volume" in line.lower() or "mute" in line.lower():
-                update_volume()
-                render_bar()
-
-def watch_mic():
-    """Watch mic mute changes via pw-mon"""
-    update_mic()
-    proc = subprocess.Popen(
-        ["pw-mon", "-N"],
-        stdout=subprocess.PIPE,
-        text=True,
-        stderr=subprocess.DEVNULL
-    )
-    if proc.stdout:
-        for line in proc.stdout:
-            if "mute" in line.lower():
-                update_mic()
-                render_bar()
-
-def watch_datetime():
-    """Watch time changes (every minute)"""
-    while True:
-        update_datetime()
-        render_bar()
-        time.sleep(60)
-
-def watch_date_format():
-    """Watch date format toggle"""
-    if not PANEL_DATE_FORMAT.exists():
-        PANEL_DATE_FORMAT.write_text("compact")
-    
-    proc = subprocess.Popen(
-        ["inotifywait", "-m", "-q", "-e", "close_write", str(PANEL_DATE_FORMAT)],
-        stdout=subprocess.PIPE,
-        text=True,
-        stderr=subprocess.DEVNULL
-    )
-    if proc.stdout:
-        for line in proc.stdout:
-            update_datetime()
-            render_bar()
-
-def watch_vpn():
-    """Watch VPN changes"""
-    # Initialize VPN cache
-    try:
-        result = subprocess.run(
-            ["mullvad", "status"],
-            capture_output=True, text=True, timeout=1
-        )
-        vpn_status = result.stdout
-        
-        if "Connected" in vpn_status:
-            # Parse relay from status output
-            for line in vpn_status.split('\n'):
-                if "Relay:" in line:
-                    vpn_relay = line.split()[1]
-                    PANEL_VPN.write_text(vpn_relay)
-                    break
-        elif "Connecting" in vpn_status:
-            PANEL_VPN.write_text("Connecting")
-        elif "Blocked" in vpn_status:
-            PANEL_VPN.write_text("Blocked")
-        else:
-            PANEL_VPN.write_text("Unsecured")
-    except:
-        PANEL_VPN.write_text("Unsecured")
-    
-    update_vpn()
-    
-    proc = subprocess.Popen(
-        ["mullvad", "status", "listen"],
-        stdout=subprocess.PIPE,
-        text=True,
-        stderr=subprocess.DEVNULL
-    )
-    if proc.stdout:
-        for line in proc.stdout:
-            # Update cache when status changes
-            try:
-                result = subprocess.run(
-                    ["mullvad", "status"],
-                    capture_output=True, text=True, timeout=1
-                )
-                vpn_status = result.stdout
-                
-                if "Connected" in vpn_status:
-                    for line in vpn_status.split('\n'):
-                        if "Relay:" in line:
-                            vpn_relay = line.split()[1]
-                            PANEL_VPN.write_text(vpn_relay)
-                            break
-                elif "Connecting" in vpn_status:
-                    PANEL_VPN.write_text("Connecting")
-                elif "Blocked" in vpn_status:
-                    PANEL_VPN.write_text("Blocked")
-                else:
-                    PANEL_VPN.write_text("Unsecured")
-            except:
-                PANEL_VPN.write_text("Unsecured")
-            
-            update_vpn()
-            render_bar()
-
-def watch_network():
-    """Watch network changes"""
-    # Initialize network cache
-    try:
-        result = subprocess.run(
-            ["nmcli", "-t", "-f", "type,state,name", "connection", "show", "--active"],
-            capture_output=True, text=True, timeout=1
-        )
-        connection = result.stdout.split('\n')[0] if result.stdout else ""
-        
-        if "802-11-wireless" in connection:
-            PANEL_NETWORK.write_text(connection.split(':')[2] if ':' in connection else "WiFi")
-        elif "802-3-ethernet" in connection:
-            PANEL_NETWORK.write_text("Wired")
-        else:
-            PANEL_NETWORK.write_text("Disconnected")
-    except:
-        PANEL_NETWORK.write_text("Disconnected")
-    
-    update_network()
-    
-    proc = subprocess.Popen(
-        ["nmcli", "monitor"],
-        stdout=subprocess.PIPE,
-        text=True,
-        stderr=subprocess.DEVNULL
-    )
-    if proc.stdout:
-        for line in proc.stdout:
-            # Update cache when network changes
-            try:
-                result = subprocess.run(
-                    ["nmcli", "-t", "-f", "type,state,name", "connection", "show", "--active"],
-                    capture_output=True, text=True, timeout=1
-                )
-                connection = result.stdout.split('\n')[0] if result.stdout else ""
-                
-                if "802-11-wireless" in connection:
-                    PANEL_NETWORK.write_text(connection.split(':')[2] if ':' in connection else "WiFi")
-                elif "802-3-ethernet" in connection:
-                    PANEL_NETWORK.write_text("Wired")
-                else:
-                    PANEL_NETWORK.write_text("Disconnected")
-            except:
-                PANEL_NETWORK.write_text("Disconnected")
-            
-            update_network()
-            render_bar()
-
-def watch_bluetooth():
-    """Watch Bluetooth connection changes"""
-    update_bluetooth()
-    
-    # Monitor bluetoothctl for connection events
-    proc = subprocess.Popen(
-        ["stdbuf", "-oL", "bluetoothctl"],
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        text=True,
-        stderr=subprocess.DEVNULL
-    )
-    
-    if proc.stdout:
-        for line in proc.stdout:
-            # Look for connection state changes
-            if "Connected: yes" in line or "Connected: no" in line:
-                update_bluetooth()
-                render_bar()
-
-def watch_speedtest():
-    """Watch speedtest state changes"""
-    if not PANEL_SPEEDTEST.exists():
-        PANEL_SPEEDTEST.write_text("⊙")
-    
-    update_speedtest()
-    
-    proc = subprocess.Popen(
-        ["inotifywait", "-m", "-q", "-e", "close_write", str(PANEL_SPEEDTEST)],
-        stdout=subprocess.PIPE,
-        text=True,
-        stderr=subprocess.DEVNULL
-    )
-    if proc.stdout:
-        for line in proc.stdout:
-            update_speedtest()
-            render_bar()
-
-def watch_player():
-    """Poll playerctl for metadata changes"""
-    last = None
-    while True:
-        update_player()
-        with lock:
-            current = state['player']
-        if current != last:
-            last = current
-            render_bar()
-        time.sleep(2)
-
-def watch_workspace():
-    """Watch workspace changes"""
-    if not PANEL_WORKSPACE.exists():
-        PANEL_WORKSPACE.write_text("1")
-    
-    proc = subprocess.Popen(
-        ["inotifywait", "-m", "-q", "-e", "close_write,modify", str(PANEL_WORKSPACE)],
-        stdout=subprocess.PIPE,
-        text=True,
-        stderr=subprocess.DEVNULL
-    )
-    if proc.stdout:
-        for line in proc.stdout:
-            update_desktops()
-            render_bar()
-
-if __name__ == "__main__":
-    # Initialize all states
-    update_desktops()
-    update_brightness()
-    update_volume()
-    update_mic()
-    update_battery()
-    update_datetime()
-    update_vpn()
-    update_network()
-    update_bluetooth()
-    update_speedtest()
-    update_player()
-    
-    # Render initial bar
-    render_bar()
-    
-    # Start all watchers in threads
-    threads = [
-        threading.Thread(target=watch_desktops, daemon=True),
-        threading.Thread(target=watch_brightness, daemon=True),
-        threading.Thread(target=watch_volume, daemon=True),
-        threading.Thread(target=watch_mic, daemon=True),
-        threading.Thread(target=watch_battery, daemon=True),
-        threading.Thread(target=watch_battery_percentage, daemon=True),
-        threading.Thread(target=watch_datetime, daemon=True),
-        threading.Thread(target=watch_date_format, daemon=True),
-        threading.Thread(target=watch_vpn, daemon=True),
-        threading.Thread(target=watch_network, daemon=True),
-        threading.Thread(target=watch_bluetooth, daemon=True),
-        threading.Thread(target=watch_speedtest, daemon=True),
-        threading.Thread(target=watch_player, daemon=True),
-        threading.Thread(target=watch_workspace, daemon=True),
-    ]
-    
-    for thread in threads:
-        thread.start()
-    
-    # Keep main thread alive
-    try:
-        while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        sys.exit(0)
+def desktops():
+ try:
+  d=json.loads(cmd('bspc','wm','-d')); w=int(val(workf,'1')); off=(w-1)*9; fm=d['focusedMonitorId']; cur=''; occ=set()
+  for m in d['monitors']:
+   for x in m['desktops']:
+    if x.get('root'): occ.add(x['name'])
+    if m['id']==fm and x['id']==m['focusedDesktopId']: cur=x['name']
+  n=int(cur)-off
+  out=''.join(f"%{{A:/home/mx/.config/bspwm/bspwm-workspace-helper.sh focus {i}:}}%{{F#{'FFFFFF' if i==n else '888888' if str(off+i) in occ else '444444'}}}{'['+str(i)+']' if i==n else ' '+str(i)+' '}%{{F-}}%{{A}}" for i in range(1,10))
+  D['desk']=out+f" %{{A:/home/mx/.config/bspwm/bspwm-workspace-helper.sh cycle:}}[{('W','P','O')[w-1]}]%{{A}}"
+ except (ValueError,KeyError,TypeError,json.JSONDecodeError): D['desk']=''
+def audio():
+ v=cmd('wpctl','get-volume','@DEFAULT_AUDIO_SINK@'); p=v.split(); D['vol']=f'{int(float(p[1])*100)}%' if len(p)>1 else 'N/A'; D['muted']='M' if 'MUTED' in v else ''; D['mic']='X' if 'yes' in cmd('pactl','get-source-mute','@DEFAULT_SOURCE@') else ''
+def brightness():
+ b=cmd('brightnessctl','-m').split(','); D['bright']=b[3].rstrip('%') if len(b)>3 else 'N/A'
+def date():
+ D['date']=cmd('date','+%A, %B %d, %Y %I:%M %p' if val(datef,'compact')=='verbose' else '+%a %Y-%m-%d %H:%M')
+def battery():
+ try: D['bat']=('C' if Path('/sys/class/power_supply/BAT0/status').read_text().strip()=='Charging' else 'D')+' '+Path('/sys/class/power_supply/BAT0/capacity').read_text().strip()+'%'
+ except OSError: D['bat']='N/A'
+def files():
+ try:
+  t=json.loads(cmd('tailscale','status','--json')); suffix='.'+t.get('MagicDNSSuffix','').rstrip('.')
+  online=t.get('Self',{}).get('Online') is True and t.get('BackendState')=='Running'; name=t.get('Self',{}).get('DNSName','').rstrip('.')
+  if suffix and name.endswith(suffix): name=name[:-len(suffix)].rstrip('.')
+  exit_id=t.get('ExitNodeStatus',{}).get('ID'); peers=t.get('Peer',{}); exit_name=next((p.get('DNSName','').rstrip('.').removesuffix(suffix).rstrip('.') for p in peers.values() if p.get('ID')==exit_id), '')
+  D['ts']=f'[TS:{name}{">"+exit_name if exit_name else ""}]' if online and name else '[TS:off]'
+ except (json.JSONDecodeError,AttributeError): D['ts']='[TS:off]'
+ try:
+  m=json.loads(cmd('mullvad','status','--json')); s=m.get('state','').lower(); host=m.get('details',{}).get('location',{}).get('hostname','')
+  D['vpn']=f'[M:{host}]' if s=='connected' and host else f'[M:{s or "off"}]'
+ except (json.JSONDecodeError,AttributeError): D['vpn']='[M:unknown]'
+ active=cmd('nmcli','-t','-f','type,state,name','connection','show','--active').splitlines()
+ name=next((x.split(':',2)[2] for x in active if x.startswith('802-11-wireless:')), 'Wired' if any(x.startswith('802-3-ethernet:') for x in active) else 'off')
+ D['net']=f'[W:{name}]'
+def click(t,l='',r='',up='',down=''):
+ a=[x for x in (f'%{{A:{l}:}}' if l else '',f'%{{A3:{r}:}}' if r else '',f'%{{A4:{up}:}}' if up else '',f'%{{A5:{down}:}}' if down else '') if x]
+ return ''.join(a)+t+'%{A}'*len(a)
+def render():
+ brightness=f"%{{A4:brightnessctl set +5%:}}%{{A5:brightnessctl set 5%-:}}{D['bright']}%%{{A}}%{{A}}"
+ right='   '.join((click(D['ts'],'/home/mx/.config/bspwm/panel-toggle-tailscale.sh'),click(D['vpn'],'/home/mx/.config/bspwm/panel-toggle-vpn.sh','mullvad reconnect'),click(D['net'],'/home/mx/.config/bspwm/panel-toggle-wifi.sh','ghostty -e nmtui'),click('[B]','', 'ghostty -e bluetoothctl'),brightness,click(D['mic']+D['muted']+(' ' if D['mic'] or D['muted'] else '')+D['vol'],'wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle','pactl set-source-mute @DEFAULT_SOURCE@ toggle','wpctl set-volume -l 1.2 @DEFAULT_AUDIO_SINK@ 5%+','wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-'),click(D['date'],'/home/mx/.config/bspwm/panel-toggle-date.sh','ghostty -e sh -c "cal -y; read"'),click(D['bat'],'',"ghostty -e sh -c 'SUDO_ASKPASS=/home/mx/.local/bin/sudo-askpass sudo -A -Es btop'")))
+ print('%{B#1a1a1a}%{F#CCCCCC}%{l} '+D['desk']+'%{r}'+right+' ',flush=True)
+for p,v in ((datef,'compact'),(workf,'1'),(tsf,'')):
+ if not p.exists(): p.write_text(v)
+for x in (('bspc','subscribe','desktop_focus','node_transfer'),('nmcli','monitor'),('mullvad','status','listen'),('pw-mon','-N')): watch(*x)
+watch('udevadm','monitor','--kernel','--subsystem-match=backlight',data='bright')
+watch('udevadm','monitor','--kernel','--subsystem-match=power_supply',data='battery')
+watch('curl','-sN','--unix-socket','/run/tailscale/tailscaled.sock','http://local-tailscaled/localapi/v0/watch-ipn-bus',data='tailscale')
+watch('inotifywait','-m','-q','-e','close_write',str(datef),data='date')
+watch('inotifywait','-m','-q','-e','close_write,modify',str(workf),data='desk')
+watch('inotifywait','-m','-q','-e','close_write,modify,attrib',str(tsf),data='tailscale')
+desktops(); audio(); brightness(); date(); battery(); files(); render(); dirty={'desk','audio','bright','date','battery','files'}; next_poll=time.monotonic()+10
+while True:
+ for k,_ in S.select(max(0,next_poll-time.monotonic())):
+  if not k.fileobj.readline():
+   S.unregister(k.fileobj); k.fileobj.close(); continue
+  dirty.add({'bspc':'desk','pw-mon':'audio','nmcli':'files','mullvad':'files','tailscale':'files','date':'date','bright':'bright','battery':'battery'}.get(k.data,'files'))
+ if time.monotonic()>=next_poll:
+  dirty.update(('bright','date','battery')); next_poll=time.monotonic()+10
+ if dirty:
+  if 'desk' in dirty: desktops()
+  if 'audio' in dirty: audio()
+  if 'bright' in dirty: brightness()
+  if 'date' in dirty: date()
+  if 'battery' in dirty: battery()
+  if 'files' in dirty: files()
+  render(); dirty.clear()

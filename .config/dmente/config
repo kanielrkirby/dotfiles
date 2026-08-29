@@ -1,0 +1,16 @@
+# ============================================
+# dmente - Ente Auth Menu Configuration
+# ============================================
+#
+# This file configures the menu program and pinentry program used by dmente.
+# Run 'dmente setup' to reconfigure.
+#
+
+# Menu program for displaying selections
+# Options: dmenu, bemenu, rofi, wmenu, fuzzel, tofi, auto
+# Set to 'auto' to automatically detect available menu programs
+MENU_CMD=dmenu
+
+# Pinentry program for password prompts for GPG encryption
+# Options: pinentry-dmenu, pinentry-curses, pinentry-gnome3, pinentry-qt, pinentry
+PINENTRY_CMD=pinentry-dmenu

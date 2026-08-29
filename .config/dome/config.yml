@@ -1,0 +1,12 @@
+# Global dome configuration
+# Place at: ~/.config/dome/config.yml
+
+portal:
+  url: https://portal.dome.software
+  database: domeodoo-deploy-dome-inc-prod-32104255
+  api_key: 7a7cd9747dccf9b3eeca70afd1519789076864ab  # or set DOME_API_KEY env var
+
+defaults:
+  branch_template: "hd-{id}/{slug}"
+  commit_template: "[HD-{id}] {message}"
+  main_branch: auto  # auto-detect from main/master/develop, or set explicitly

@@ -1,0 +1,29 @@
+{
+  "lastChangelogVersion": "0.84.2",
+  "theme": "dark",
+  "packages": [
+    "npm:pi-web-access",
+    "npm:@dietrichgebert/ponytail",
+    "npm:@yuru7/pi-native-notify",
+    "npm:pi-caveman",
+    "npm:pi-cd",
+    "npm:@hicaru/pi-rlm",
+    "npm:@picassio/pi-agent-browser-native",
+    "npm:pi-subagents",
+    "npm:@agegr/pi-web",
+    "npm:@gotgenes/pi-permission-system",
+    "npm:pi-mcp-adapter",
+    "../../dev/lab/pi-email-custom-from",
+    "npm:pi-odoo-workflow",
+    "npm:@saber7ooth/pi-archon"
+  ],
+  "defaultProvider": "openai-codex",
+  "defaultModel": "gpt-5.6-luna",
+  "defaultThinkingLevel": "minimal",
+  "terminal": {
+    "clearOnShrink": false
+  },
+  "warnings": {
+    "anthropicExtraUsage": false
+  }
+}

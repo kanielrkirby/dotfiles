@@ -1,0 +1,20 @@
+# ============================================
+# rbwm - Bitwarden Menu Configuration
+# ============================================
+#
+# This file configures the menu program and pinentry program used by rbwm.
+# Run 'rbwm setup' to reconfigure.
+#
+
+# Menu program for displaying selections
+# Options: dmenu, bemenu, rofi, wmenu, fuzzel, tofi, auto
+# Set to 'auto' to automatically detect available menu programs
+MENU_CMD=dmenu
+
+# Pinentry program for password prompts when unlocking vault
+# Options: pinentry-dmenu, pinentry-curses, pinentry-gnome3, pinentry-qt, pinentry
+PINENTRY_CMD=pinentry-dmenu
+PASSWORD_LENGTH=60
+PASSWORD_SPECIAL=true
+PASSWORD_NUMBERS=true
+PASSWORD_LETTERS=true

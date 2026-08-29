@@ -1,0 +1,1 @@
+You are running on NixOS. That means that common or expected packages may not exist, but almost ALWAYS exist in `nixpkgs`. Prefer running through flake syntax, i.e., `nix shell nixpkgs#something`, NOT `nix-shell -p something`.

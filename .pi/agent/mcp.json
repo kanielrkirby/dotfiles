@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "odoo": {
+      "command": "/home/mx/.config/opencode/odoo-wrapper.sh",
+      "env": {
+        "OPENCODE_ODOO_CONFIG": "/home/mx/.pi/agent/odoo/config.json"
+      }
+    }
+  }
+}

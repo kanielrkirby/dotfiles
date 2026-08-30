@@ -1,0 +1,30 @@
+[window]
+opacity = 0.85
+decorations = "Full"
+decorations_theme_variant = "Dark"
+
+[window.padding]
+x = 12
+y = 12
+
+[font]
+size = 7.0
+
+[font.normal]
+family = "MonaspiceNe Nerd Font Mono"
+
+[font.bold]
+family = "MonaspiceNe Nerd Font Mono"
+
+[font.italic]
+family = "MonaspiceNe Nerd Font Mono"
+
+[font.bold_italic]
+family = "MonaspiceNe Nerd Font Mono"
+
+[scrolling]
+history = 100000
+multiplier = 3
+
+[env]
+TERM = "xterm-256color"

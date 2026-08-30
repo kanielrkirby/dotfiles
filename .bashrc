@@ -1,9 +1,13 @@
 export EDITOR="hx"
 export NIXPKGS_ALLOW_UNFREE=1
 
+export PATH="$PATH:$HOME/.local/bin"
+
 shopt -s histappend
 export HISTSIZE="1000000"
 export HISTFILESIZE="10000000"
+
+alias pi-web="PI_WEB_HOSTNAME=0.0.0.0 PI_WEB_ALLOWED_HOSTS=p14.tail.gum.cx npx @agegr/pi-web@latest"
 
 # FZF integration
 if command -v fzf &> /dev/null; then

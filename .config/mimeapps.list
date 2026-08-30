@@ -13,6 +13,9 @@ application/x-extension-shtml=chromium-browser.desktop
 application/xhtml+xml=chromium-browser.desktop
 application/x-extension-xhtml=chromium-browser.desktop
 application/x-extension-xht=chromium-browser.desktop
+inode/directory=xfce4-file-manager.desktop
+application/x-gnome-saved-search=nemo.desktop
+x-scheme-handler/trash=xfce4-file-manager.desktop
 
 [Added Associations]
 image/png=feh.desktop;
@@ -26,3 +29,6 @@ application/x-extension-shtml=chromium-browser.desktop;
 application/xhtml+xml=chromium-browser.desktop;
 application/x-extension-xhtml=chromium-browser.desktop;
 application/x-extension-xht=chromium-browser.desktop;
+inode/directory=xfce4-file-manager.desktop;
+x-scheme-handler/trash=xfce4-file-manager.desktop;
+application/x-zerosize=Helix.desktop;

@@ -8,7 +8,7 @@ super + shift + Return
 
 # program launcher
 super + p
-	menu_custom
+	gumenu
 
 # whispaste (voice to text)
 super + backslash
@@ -17,15 +17,6 @@ super + backslash
 # paste clipboard Markdown as HTML
 super + ctrl + v
 	markdown-paste
-
-# bitwarden menu
-super + comma
-	rbwm
-
-# ente auth menu
-super + period
-	dmente
-
 
 
 # make sxhkd reload its configuration files:
